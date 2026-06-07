@@ -324,8 +324,7 @@ export class CampaignStore {
                this.setActiveGlobalEffect({
                  id: mut.status.id || Date.now().toString(),
                  name: mut.status.nameSnapshot || 'Global Effect',
-                 description: mut.status.nameSnapshot,
-                 isActive: true
+                 description: mut.status.nameSnapshot
                });
                continue;
             }
@@ -545,14 +544,16 @@ export class CampaignStore {
       const combatState = shared.get('combatState');
       if (!combatState || !combatState.active || combatState.combatants.length === 0) return;
 
+      let newCombatants = combatState.combatants;
+      let mutationsToCommit: EffectMutation[] = [];
+
       combatState.turnIndex++;
       if (combatState.turnIndex >= combatState.combatants.length) {
         combatState.turnIndex = 0;
         combatState.round++;
         
         // Tick rounds for combatants IN MEMORY
-        const mutationsToCommit: EffectMutation[] = [];
-        const newCombatants = combatState.combatants.map((c: any) => {
+        newCombatants = combatState.combatants.map((c: any) => {
           let changed = false;
           const newStatuses = (c.statuses || []).map((s: any) => {
             if (s.remaining !== undefined) {

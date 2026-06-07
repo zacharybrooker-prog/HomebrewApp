@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate, calculateMoonPhases } from '@frogs-world/shared';
 import type { StatFieldDef, Item, StatusInstance, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect } from '@frogs-world/shared/src/schema';
 import { HPGauge, StatField, CurrencyRow, ItemRow, SchemaEditor, StatusList, ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal } from '@frogs-world/ui';
@@ -63,7 +63,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     }
   }, [role, activeCharId, localTheme, bloodMoon]);
 
-  const initialBloodMoonMount = React.useRef(true);
+  const initialBloodMoonMount = useRef(true);
   useEffect(() => {
     if (initialBloodMoonMount.current) {
       initialBloodMoonMount.current = false;
