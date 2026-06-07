@@ -6,15 +6,14 @@ export class CloudProvider implements SyncProvider {
   private statusCallbacks: Set<(status: 'connecting' | 'connected' | 'disconnected') => void> = new Set();
 
   constructor(config: SyncProviderConfig) {
-    // Fastify/ws needs the token either in the query params or we pass it
-    const url = new URL(config.url);
-    if (config.token) url.searchParams.set('token', config.token);
-    
     this.provider = new WebsocketProvider(
-      url.toString(),
+      config.url,
       config.campaignId,
       config.doc,
-      { connect: false }
+      { 
+        connect: false,
+        params: config.token ? { token: config.token } : {}
+      }
     );
 
     this.provider.on('status', (event: { status: 'connecting' | 'connected' | 'disconnected' }) => {

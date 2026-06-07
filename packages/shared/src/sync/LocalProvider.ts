@@ -6,16 +6,18 @@ export class LocalProvider implements SyncProvider {
   private statusCallbacks: Set<(status: 'connecting' | 'connected' | 'disconnected') => void> = new Set();
 
   constructor(config: SyncProviderConfig) {
-    // Pass role and participantId as connection params so the server can gate access
-    const url = new URL(config.url);
-    if (config.role) url.searchParams.set('role', config.role);
-    if (config.participantId) url.searchParams.set('participantId', config.participantId);
+    const params: Record<string, string> = {};
+    if (config.role) params.role = config.role;
+    if (config.participantId) params.participantId = config.participantId;
 
     this.provider = new WebsocketProvider(
-      url.toString(),
+      config.url,
       config.campaignId,
       config.doc,
-      { connect: false } // we manually connect
+      { 
+        connect: false,
+        params
+      }
     );
 
     this.provider.on('status', (event: { status: 'connecting' | 'connected' | 'disconnected' }) => {
