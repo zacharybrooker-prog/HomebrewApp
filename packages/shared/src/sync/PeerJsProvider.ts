@@ -60,10 +60,22 @@ export class PeerJsProvider {
     this.statusCallbacks.forEach(cb => cb(status));
   }
 
-  private chunkBuffers: Map<string, { total: number, chunks: string[] }> = new Map();
+  private chunkBuffers: Map<string, { total: number, chunks: string[], msgType: string }> = new Map();
 
-  private sendData(conn: DataConnection, update: Uint8Array) {
+  private sendPayload(conn: DataConnection, payload: any) {
     try {
+      // We must avoid sending large objects because PeerJS does not chunk JSON strings
+      // We also must avoid sending Uint8Array because PeerJS BinaryPack is buggy on iOS Safari
+      let update: Uint8Array;
+      let msgType: string;
+      
+      if (payload.type === 'sync1' || payload.type === 'sync2' || payload.type === 'update') {
+        update = payload.data;
+        msgType = payload.type;
+      } else {
+        return;
+      }
+
       let str = '';
       const sliceSize = 8192;
       for (let i = 0; i < update.length; i += sliceSize) {
@@ -77,7 +89,9 @@ export class PeerJsProvider {
       
       for (let i = 0; i < totalChunks; i++) {
         const chunk = b64.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        conn.send({ type: 'yjs-chunk', id: msgId, index: i, total: totalChunks, payload: chunk });
+        // FORCE JSON stringification to bypass BinaryPack completely
+        const rawString = JSON.stringify({ type: 'yjs-chunk', msgType, id: msgId, index: i, total: totalChunks, payload: chunk });
+        conn.send(rawString);
       }
     } catch (e) {
       console.error('Failed to chunk data', e);
@@ -92,8 +106,9 @@ export class PeerJsProvider {
         this.setStatus('connected');
       }
       
-      const state = Y.encodeStateAsUpdate(this.doc);
-      this.sendData(conn, state);
+      // Step 1: Send State Vector to initiate Sync Protocol
+      const sv = Y.encodeStateVector(this.doc);
+      this.sendPayload(conn, { type: 'sync1', data: sv });
     };
 
     if (conn.open) {
@@ -104,28 +119,42 @@ export class PeerJsProvider {
 
     conn.on('data', async (data: any) => {
       try {
-        if (data && typeof data === 'object' && data.type === 'yjs-chunk') {
-          let buffer = this.chunkBuffers.get(data.id);
-          if (!buffer) {
-            buffer = { total: data.total, chunks: new Array(data.total) };
-            this.chunkBuffers.set(data.id, buffer);
-          }
-          buffer.chunks[data.index] = data.payload;
-          
-          if (buffer.chunks.filter(c => c !== undefined).length === data.total) {
-            this.chunkBuffers.delete(data.id);
-            const fullB64 = buffer.chunks.join('');
-            const str = atob(fullB64);
-            const arr = new Uint8Array(str.length);
-            for (let i = 0; i < str.length; i++) {
-              arr[i] = str.charCodeAt(i);
+        if (typeof data === 'string') {
+          const parsed = JSON.parse(data);
+          if (parsed && parsed.type === 'yjs-chunk') {
+            let buffer = this.chunkBuffers.get(parsed.id);
+            if (!buffer) {
+              buffer = { total: parsed.total, chunks: new Array(parsed.total), msgType: parsed.msgType };
+              this.chunkBuffers.set(parsed.id, buffer);
             }
-            Y.applyUpdate(this.doc, arr, conn.peer);
+            buffer.chunks[parsed.index] = parsed.payload;
+            
+            if (buffer.chunks.filter(c => c !== undefined).length === parsed.total) {
+              this.chunkBuffers.delete(parsed.id);
+              const fullB64 = buffer.chunks.join('');
+              const str = atob(fullB64);
+              const arr = new Uint8Array(str.length);
+              for (let i = 0; i < str.length; i++) {
+                arr[i] = str.charCodeAt(i);
+              }
+
+              // Handle Yjs Sync Protocol
+              if (buffer.msgType === 'sync1') {
+                // Received sync step 1. Send sync step 2 (missing updates)
+                const update = Y.encodeStateAsUpdate(this.doc, arr);
+                this.sendPayload(conn, { type: 'sync2', data: update });
+                // Also send our own sync step 1 just in case
+                const sv = Y.encodeStateVector(this.doc);
+                this.sendPayload(conn, { type: 'sync1', data: sv });
+              } else if (buffer.msgType === 'sync2' || buffer.msgType === 'update') {
+                Y.applyUpdate(this.doc, arr, conn.peer);
+              }
+            }
           }
           return;
         }
 
-        // Fallback for previous raw binary formats (just in case)
+        // Fallback for previous binary/object formats
         let update: Uint8Array | null = null;
         if (data instanceof Uint8Array) {
           update = data;
@@ -160,7 +189,7 @@ export class PeerJsProvider {
   private onUpdate = (update: Uint8Array, origin: any) => {
     for (const [peerId, conn] of this.connections.entries()) {
       if (conn.open && origin !== peerId) {
-        this.sendData(conn, update);
+        this.sendPayload(conn, { type: 'update', data: update });
       }
     }
   }

@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import type { StatFieldDef, CharacterProfile, Item, StatusInstance, CalendarConfig, ItemTemplate, Note, Handout, GlobalEffect, MapPin } from './schema';
+import type { StatFieldDef, CharacterProfile, Item, StatusInstance, CalendarConfig, ItemTemplate, Note, Handout, GlobalEffect, MapPin, CombatState } from './schema';
 import { NoteSchema, HandoutSchema } from './schema';
 import { computeEffects, computeRevertEffects, type EffectMutation } from './effects/engine';
 
@@ -386,9 +386,8 @@ export class CampaignStore {
   public advanceTime(blocks: number) {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     const shared = this.getSharedMap();
-    
-    // 1. Advance TimeState
-    const timeState = shared.get('timeState') || { blocks: 0 };
+    const original = shared.get('timeState') as { blocks: number } | undefined;
+    const timeState = original ? structuredClone(original) : { blocks: 0 };
     timeState.blocks += blocks;
     shared.set('timeState', timeState);
 
@@ -491,7 +490,8 @@ export class CampaignStore {
   public startCombat() {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     const shared = this.getSharedMap();
-    const combatState = shared.get('combatState') || { active: false, round: 1, turnIndex: 0, combatants: [] };
+    const original = shared.get('combatState') as CombatState;
+    const combatState = original ? structuredClone(original) : { active: false, round: 1, turnIndex: 0, combatants: [] };
     combatState.active = true;
     combatState.round = 1;
     combatState.turnIndex = 0;
@@ -525,24 +525,27 @@ export class CampaignStore {
 
     // Sort combatants by initiative descending
     combatState.combatants.sort((a: any, b: any) => b.initiative - a.initiative);
-    shared.set('combatState', combatState);
+    shared.set('combatState', { ...combatState, combatants: [...combatState.combatants] });
   }
 
   public endCombat() {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     const shared = this.getSharedMap();
-    const combatState = shared.get('combatState') || { active: false, round: 1, turnIndex: 0, combatants: [] };
+    const original = shared.get('combatState') as CombatState;
+    const combatState = original ? structuredClone(original) : { active: false, round: 1, turnIndex: 0, combatants: [] };
     combatState.active = false;
-    shared.set('combatState', combatState);
+    shared.set('combatState', { ...combatState, combatants: [...combatState.combatants] });
   }
 
   public nextTurn() {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     
     this.doc.transact(() => {
-      const shared = this.getSharedMap();
-      const combatState = shared.get('combatState');
-      if (!combatState || !combatState.active || combatState.combatants.length === 0) return;
+        const shared = this.getSharedMap();
+        const original = shared.get('combatState') as CombatState;
+        if (!original) return;
+        let combatState = structuredClone(original);
+        if (!combatState.active || combatState.combatants.length === 0) return;
 
       let newCombatants = combatState.combatants;
       let mutationsToCommit: EffectMutation[] = [];
@@ -598,7 +601,8 @@ export class CampaignStore {
   public addCombatant(combatant: any) {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     const shared = this.getSharedMap();
-    const combatState = shared.get('combatState') || { active: false, round: 1, turnIndex: 0, combatants: [] };
+    const original = shared.get('combatState') as CombatState;
+    const combatState = original ? structuredClone(original) : { active: false, round: 1, turnIndex: 0, combatants: [] };
     combatState.combatants.push(combatant);
     combatState.combatants.sort((a: any, b: any) => b.initiative - a.initiative);
     shared.set('combatState', { ...combatState });
@@ -685,7 +689,8 @@ export class CampaignStore {
       const dmMap = this.getDmMap();
       const templates = dmMap.get('monsterTemplates') || [];
       const shared = this.getSharedMap();
-      const combatState = shared.get('combatState') || { active: false, round: 1, turnIndex: 0, combatants: [] };
+      const original = shared.get('combatState') as CombatState;
+      const combatState = original ? structuredClone(original) : { active: false, round: 1, turnIndex: 0, combatants: [] };
       
       for (const m of entry.monsters) {
         const template = templates.find((t: any) => t.id === m.templateId);

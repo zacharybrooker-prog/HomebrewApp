@@ -86,25 +86,33 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     const dmMap = store.getDmMap();
 
     const updateSharedState = () => {
-      setSchema(sharedMap.get('schema') || []);
+      setSchema([...(sharedMap.get('schema') || [])]);
       setLocked(sharedMap.get('locked') || false);
-      setTimeState(sharedMap.get('timeState') || { blocks: 0 });
-      setFeed(sharedMap.get('feed') || []);
-      setCombatState(sharedMap.get('combatState') || { active: false, round: 1, turnIndex: 0, combatants: [] });
-      setCalendarConfig(store.getCalendarConfig());
-      setCalendarEvents(store.getCalendarEvents());
-      setCharacterProfiles(store.getCharacterProfiles());
-      setRevealedHandouts(store.getRevealedHandouts());
-      setActiveGlobalEffect(store.getActiveGlobalEffect());
-      setActiveEncounters(store.getActiveEncounters());
+      setTimeState({ ...(sharedMap.get('timeState') || { blocks: 0 }) });
+      setFeed([...(sharedMap.get('feed') || [])]);
+      
+      const cs = sharedMap.get('combatState');
+      setCombatState(cs ? JSON.parse(JSON.stringify(cs)) : { active: false, round: 1, turnIndex: 0, combatants: [] });
+      
+      const cc = store.getCalendarConfig();
+      setCalendarConfig(cc ? JSON.parse(JSON.stringify(cc)) : null);
+      
+      setCalendarEvents({ ...store.getCalendarEvents() });
+      setCharacterProfiles([...store.getCharacterProfiles()]);
+      setRevealedHandouts([...store.getRevealedHandouts()]);
+      
+      const age = store.getActiveGlobalEffect();
+      setActiveGlobalEffect(age ? { ...age } : null);
+      
+      setActiveEncounters([...store.getActiveEncounters()]);
       setBloodMoon(sharedMap.get('bloodMoon') || false);
     };
     
     const updateDmState = () => {
-      setMonsterTemplates(dmMap.get('monsterTemplates') || []);
-      setEventTables(dmMap.get('eventTables') || []);
-      setNotes(store.getNotes());
-      setHandouts(store.getHandouts());
+      setMonsterTemplates([...(dmMap.get('monsterTemplates') || [])]);
+      setEventTables([...(dmMap.get('eventTables') || [])]);
+      setNotes([...store.getNotes()]);
+      setHandouts([...store.getHandouts()]);
     };
 
     sharedMap.observeDeep(updateSharedState);
@@ -138,11 +146,11 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     const charMap = store.getCharacterMap(activeCharId);
     
     const updateCharState = () => {
-      setHp(charMap.get('hp') || { current: 10, max: 10 });
-      setBaseStats(charMap.get('stats') || {});
-      setCurrencies(charMap.get('currencies') || {});
-      setInventory(charMap.get('inventory') || []);
-      setStatuses(charMap.get('statuses') || []);
+      setHp({ ...(charMap.get('hp') || { current: 10, max: 10 }) });
+      setBaseStats({ ...(charMap.get('stats') || {}) });
+      setCurrencies({ ...(charMap.get('currencies') || {}) });
+      setInventory([...(charMap.get('inventory') || [])]);
+      setStatuses([...(charMap.get('statuses') || [])]);
     };
     
     charMap.observe(updateCharState);
