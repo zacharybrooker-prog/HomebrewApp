@@ -65,12 +65,11 @@ export class PeerJsProvider {
       console.log('PeerJS connection opened with:', conn.peer);
       this.connections.set(conn.peer, conn);
       if (!this.isHost) {
-        this.setStatus('connected'); // Player is now connected to host
+        this.setStatus('connected');
       }
       
-      // Send the entire document state to the newly connected peer
       const state = Y.encodeStateAsUpdate(this.doc);
-      conn.send(state);
+      conn.send(this.toHex(state));
     };
 
     if (conn.open) {
@@ -81,31 +80,11 @@ export class PeerJsProvider {
 
     conn.on('data', async (data: any) => {
       try {
-        let update: Uint8Array | null = null;
-        if (data instanceof Uint8Array) {
-          update = data;
-        } else if (data instanceof ArrayBuffer) {
-          update = new Uint8Array(data);
-        } else if (Array.isArray(data)) {
-          update = new Uint8Array(data);
-        } else if (typeof data === 'object' && data !== null && data.type === 'Buffer' && Array.isArray(data.data)) {
-          // NodeJS Buffer fallback
-          update = new Uint8Array(data.data);
-        } else if (data instanceof Blob) {
-          const ab = await data.arrayBuffer();
-          update = new Uint8Array(ab);
-        } else {
-          // If PeerJS serialized the Uint8Array into a plain object { 0: 23, 1: 54 ... }
-          const vals = Object.values(data);
-          if (vals.length > 0 && typeof vals[0] === 'number') {
-            update = new Uint8Array(vals as number[]);
-          }
-        }
-
-        if (update) {
+        if (typeof data === 'string') {
+          const update = this.fromHex(data);
           Y.applyUpdate(this.doc, update, conn.peer);
         } else {
-          console.warn('PeerJS received unknown data type', data);
+          console.warn('PeerJS received non-string data, ignoring.', data);
         }
       } catch (err) {
         console.error('PeerJS data handling error', err);
@@ -122,11 +101,30 @@ export class PeerJsProvider {
   }
 
   private onUpdate = (update: Uint8Array, origin: any) => {
+    const hexUpdate = this.toHex(update);
     for (const [peerId, conn] of this.connections.entries()) {
       if (conn.open && origin !== peerId) {
-        conn.send(update);
+        conn.send(hexUpdate);
       }
     }
+  }
+
+  private toHex(buffer: Uint8Array): string {
+    let hex = '';
+    for (let i = 0; i < buffer.length; i++) {
+      let h = buffer[i].toString(16);
+      if (h.length === 1) h = '0' + h;
+      hex += h;
+    }
+    return hex;
+  }
+
+  private fromHex(hexString: string): Uint8Array {
+    const result = new Uint8Array(hexString.length / 2);
+    for (let i = 0; i < hexString.length; i += 2) {
+      result[i / 2] = parseInt(hexString.substring(i, i + 2), 16);
+    }
+    return result;
   }
 
   public connect(): void {
