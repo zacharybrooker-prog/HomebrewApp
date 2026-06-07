@@ -252,7 +252,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     try {
       const provider = new CloudProvider({
         doc: store.doc,
-        url: 'wss://cloud.frogs-world.com',
+        url: 'wss://demos.yjs.dev/ws',
         campaignId,
         role: role || 'player',
         participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
