@@ -1,17 +1,17 @@
-import { chromium } from 'playwright';
+import { chromium } from '@playwright/test';
 import { exec } from 'child_process';
 
 (async () => {
   console.log('Starting preview server...');
   const server = exec('pnpm dlx vite preview --port 4173');
   
-  await new Promise(r => setTimeout(r, 4000));
+  await new Promise(r => setTimeout(r, 3000));
 
   console.log('Launching browser...');
   const browser = await chromium.launch();
   const page = await browser.newPage();
   
-  page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
+  page.on('console', msg => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
   page.on('pageerror', error => console.log('BROWSER ERROR:', error.message));
   
   console.log('Navigating...');

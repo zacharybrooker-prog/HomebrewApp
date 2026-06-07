@@ -1,0 +1,10 @@
+{
+  "buildCommand": "pnpm dlx turbo run build --filter web",
+  "outputDirectory": "packages/web/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
