@@ -238,7 +238,8 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         url: lanTarget,
         campaignId,
         role: role || 'player',
-        participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`
+        participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
+        token: role === 'dm' ? 'mock-dm' : 'mock-player'
       });
       setSyncStatus('connecting');
       provider.onStatusChange(setSyncStatus);

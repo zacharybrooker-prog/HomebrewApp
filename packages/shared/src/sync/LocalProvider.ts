@@ -9,6 +9,7 @@ export class LocalProvider implements SyncProvider {
     const params: Record<string, string> = {};
     if (config.role) params.role = config.role;
     if (config.participantId) params.participantId = config.participantId;
+    if (config.token) params.token = config.token;
 
     this.provider = new WebsocketProvider(
       config.url,
