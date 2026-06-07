@@ -61,7 +61,7 @@ export class PeerJsProvider {
   }
 
   private setupConnection = (conn: DataConnection) => {
-    conn.on('open', () => {
+    const onOpen = () => {
       console.log('PeerJS connection opened with:', conn.peer);
       this.connections.set(conn.peer, conn);
       if (!this.isHost) {
@@ -71,12 +71,44 @@ export class PeerJsProvider {
       // Send the entire document state to the newly connected peer
       const state = Y.encodeStateAsUpdate(this.doc);
       conn.send(state);
-    });
+    };
 
-    conn.on('data', (data) => {
-      if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
-        const update = new Uint8Array(data);
-        Y.applyUpdate(this.doc, update, this);
+    if (conn.open) {
+      onOpen();
+    } else {
+      conn.on('open', onOpen);
+    }
+
+    conn.on('data', async (data: any) => {
+      try {
+        let update: Uint8Array | null = null;
+        if (data instanceof Uint8Array) {
+          update = data;
+        } else if (data instanceof ArrayBuffer) {
+          update = new Uint8Array(data);
+        } else if (Array.isArray(data)) {
+          update = new Uint8Array(data);
+        } else if (typeof data === 'object' && data !== null && data.type === 'Buffer' && Array.isArray(data.data)) {
+          // NodeJS Buffer fallback
+          update = new Uint8Array(data.data);
+        } else if (data instanceof Blob) {
+          const ab = await data.arrayBuffer();
+          update = new Uint8Array(ab);
+        } else {
+          // If PeerJS serialized the Uint8Array into a plain object { 0: 23, 1: 54 ... }
+          const vals = Object.values(data);
+          if (vals.length > 0 && typeof vals[0] === 'number') {
+            update = new Uint8Array(vals as number[]);
+          }
+        }
+
+        if (update) {
+          Y.applyUpdate(this.doc, update, conn.peer);
+        } else {
+          console.warn('PeerJS received unknown data type', data);
+        }
+      } catch (err) {
+        console.error('PeerJS data handling error', err);
       }
     });
 
@@ -90,11 +122,9 @@ export class PeerJsProvider {
   }
 
   private onUpdate = (update: Uint8Array, origin: any) => {
-    if (origin !== this) {
-      for (const conn of this.connections.values()) {
-        if (conn.open) {
-          conn.send(update);
-        }
+    for (const [peerId, conn] of this.connections.entries()) {
+      if (conn.open && origin !== peerId) {
+        conn.send(update);
       }
     }
   }
