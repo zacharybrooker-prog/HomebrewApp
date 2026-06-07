@@ -1,0 +1,24 @@
+{
+  "name": "@frogs-world/shared",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "y-indexeddb": "^9.0.12",
+    "y-websocket": "^2.0.4",
+    "yjs": "^13.6.14",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.8"
+  }
+}
