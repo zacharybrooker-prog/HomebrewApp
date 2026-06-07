@@ -452,7 +452,12 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
           <div className="glass-panel flex flex-col gap-3">
             <div className="flex justify-between items-center">
               <div>
-                <div className="sub-label">Multiplayer Sync</div>
+                <div className="sub-label flex items-center gap-2">
+                  Multiplayer Sync
+                  <span className="font-mono bg-black/40 px-1.5 py-0.5 rounded text-[10px] text-accent tracking-widest border border-accent/20">
+                    CODE: {campaignId}
+                  </span>
+                </div>
                 <div className="text-sm font-semibold flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${syncStatus === 'connected' ? 'bg-success shadow-[0_0_8px_var(--success)]' : syncStatus === 'connecting' ? 'bg-secondary animate-pulse' : 'bg-danger'}`}></span>
                   {syncStatus === 'connected' ? 'Connected to Campaign' : syncStatus === 'connecting' ? 'Connecting...' : 'Offline (Local Only)'}
