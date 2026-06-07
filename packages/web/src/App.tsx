@@ -378,7 +378,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             </div>
           )}
 
-          {activeEncounters.map(encounter => (
+          {(activeEncounters || []).map(encounter => (
             <div key={encounter.id} className="w-full max-w-2xl mb-4 relative animate-fade-in-up">
               <div className="p-4 rounded-lg border shadow-lg" style={{ background: 'linear-gradient(135deg, rgba(50,20,20,0.8) 0%, rgba(30,10,10,0.9) 100%)', borderColor: 'rgba(225,29,72,0.3)', boxShadow: '0 0 15px rgba(225,29,72,0.1)' }}>
                 <div className="flex justify-between items-start">
@@ -420,7 +420,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
               <div>
                 <div className="sub-label">Role</div>
                 <div style={{ fontFamily: 'var(--font-decorative)', fontSize: '1rem', fontWeight: 700, color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)', letterSpacing: '0.04em' }}>
-                  {role === 'dm' ? 'Dungeon Master' : characterProfiles.find(c => c.id === activeCharId)?.name || 'Adventurer'}
+                  {role === 'dm' ? 'Dungeon Master' : (characterProfiles || []).find(c => c.id === activeCharId)?.name || 'Adventurer'}
                 </div>
               </div>
             </div>

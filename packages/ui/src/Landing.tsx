@@ -94,7 +94,7 @@ export function Landing({ onHost, onJoin }: { onHost: (id: string) => void; onJo
             </div>
             
             <div className="flex flex-col gap-3 mb-6">
-              {campaigns.sort((a, b) => b.lastPlayed - a.lastPlayed).map(c => (
+              {[...campaigns].sort((a, b) => b.lastPlayed - a.lastPlayed).map((c) => (
                 <div key={c.id} className="flex flex-col p-3 rounded bg-white/5 border border-white/10 group hover:border-white/30 transition-all">
                   <div className="flex justify-between items-center">
                     <span className="font-bold">{c.name}</span>
