@@ -60,6 +60,30 @@ export class PeerJsProvider {
     this.statusCallbacks.forEach(cb => cb(status));
   }
 
+  private chunkBuffers: Map<string, { total: number, chunks: string[] }> = new Map();
+
+  private sendData(conn: DataConnection, update: Uint8Array) {
+    try {
+      let str = '';
+      const sliceSize = 8192;
+      for (let i = 0; i < update.length; i += sliceSize) {
+        str += String.fromCharCode.apply(null, update.subarray(i, i + sliceSize) as any);
+      }
+      const b64 = btoa(str);
+
+      const CHUNK_SIZE = 16000;
+      const totalChunks = Math.ceil(b64.length / CHUNK_SIZE);
+      const msgId = Math.random().toString(36).substring(2, 9);
+      
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = b64.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        conn.send({ type: 'yjs-chunk', id: msgId, index: i, total: totalChunks, payload: chunk });
+      }
+    } catch (e) {
+      console.error('Failed to chunk data', e);
+    }
+  }
+
   private setupConnection = (conn: DataConnection) => {
     const onOpen = () => {
       console.log('PeerJS connection opened with:', conn.peer);
@@ -69,7 +93,7 @@ export class PeerJsProvider {
       }
       
       const state = Y.encodeStateAsUpdate(this.doc);
-      conn.send(this.toHex(state));
+      this.sendData(conn, state);
     };
 
     if (conn.open) {
@@ -80,11 +104,44 @@ export class PeerJsProvider {
 
     conn.on('data', async (data: any) => {
       try {
-        if (typeof data === 'string') {
-          const update = this.fromHex(data);
+        if (data && typeof data === 'object' && data.type === 'yjs-chunk') {
+          let buffer = this.chunkBuffers.get(data.id);
+          if (!buffer) {
+            buffer = { total: data.total, chunks: new Array(data.total) };
+            this.chunkBuffers.set(data.id, buffer);
+          }
+          buffer.chunks[data.index] = data.payload;
+          
+          if (buffer.chunks.filter(c => c !== undefined).length === data.total) {
+            this.chunkBuffers.delete(data.id);
+            const fullB64 = buffer.chunks.join('');
+            const str = atob(fullB64);
+            const arr = new Uint8Array(str.length);
+            for (let i = 0; i < str.length; i++) {
+              arr[i] = str.charCodeAt(i);
+            }
+            Y.applyUpdate(this.doc, arr, conn.peer);
+          }
+          return;
+        }
+
+        // Fallback for previous raw binary formats (just in case)
+        let update: Uint8Array | null = null;
+        if (data instanceof Uint8Array) {
+          update = data;
+        } else if (data instanceof ArrayBuffer) {
+          update = new Uint8Array(data);
+        } else if (Array.isArray(data)) {
+          update = new Uint8Array(data);
+        } else if (typeof data === 'object' && data !== null && data.type === 'Buffer' && Array.isArray(data.data)) {
+          update = new Uint8Array(data.data);
+        } else if (data instanceof Blob) {
+          const ab = await data.arrayBuffer();
+          update = new Uint8Array(ab);
+        }
+
+        if (update) {
           Y.applyUpdate(this.doc, update, conn.peer);
-        } else {
-          console.warn('PeerJS received non-string data, ignoring.', data);
         }
       } catch (err) {
         console.error('PeerJS data handling error', err);
@@ -101,30 +158,11 @@ export class PeerJsProvider {
   }
 
   private onUpdate = (update: Uint8Array, origin: any) => {
-    const hexUpdate = this.toHex(update);
     for (const [peerId, conn] of this.connections.entries()) {
       if (conn.open && origin !== peerId) {
-        conn.send(hexUpdate);
+        this.sendData(conn, update);
       }
     }
-  }
-
-  private toHex(buffer: Uint8Array): string {
-    let hex = '';
-    for (let i = 0; i < buffer.length; i++) {
-      let h = buffer[i].toString(16);
-      if (h.length === 1) h = '0' + h;
-      hex += h;
-    }
-    return hex;
-  }
-
-  private fromHex(hexString: string): Uint8Array {
-    const result = new Uint8Array(hexString.length / 2);
-    for (let i = 0; i < hexString.length; i += 2) {
-      result[i / 2] = parseInt(hexString.substring(i, i + 2), 16);
-    }
-    return result;
   }
 
   public connect(): void {
