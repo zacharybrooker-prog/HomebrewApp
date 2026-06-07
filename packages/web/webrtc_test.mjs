@@ -26,8 +26,8 @@ import { exec } from 'child_process';
   
   await new Promise(r => setTimeout(r, 1000));
 
-  console.log('Clicking Connect to Cloud Server...');
-  await page.getByRole('button', { name: 'Connect to Cloud Server' }).click();
+  console.log('Clicking Connect Cloud...');
+  await page.getByRole('button', { name: 'Connect Cloud' }).click();
 
   // Wait to observe any errors
   await new Promise(r => setTimeout(r, 5000));

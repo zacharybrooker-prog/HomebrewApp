@@ -14,7 +14,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   const [role, setRole] = useState<'dm' | 'player' | null>(initialRole);
   const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'monsters' | 'events' | 'calendar' | 'journal' | 'settings' | 'map'>('sheet');
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
-  const [lanTarget, setLanTarget] = useState(`ws://localhost:3000/campaign/${campaignId}`);
+  const [lanTarget, setLanTarget] = useState(`ws://localhost:3000/ws/campaign`);
   
   const [schema, setSchema] = useState<StatFieldDef[]>([]);
   const [locked, setLocked] = useState(false);

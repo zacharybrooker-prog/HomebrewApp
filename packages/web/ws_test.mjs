@@ -11,8 +11,8 @@ import { chromium } from '@playwright/test';
   console.log('Testing WebSocket...');
   await page.evaluate(() => {
     return new Promise((resolve) => {
-      console.log('Attempting connection to wss://demos.yjs.dev...');
-      const ws = new WebSocket('wss://demos.yjs.dev');
+      console.log('Attempting connection to wss://yjs.dev/ws...');
+      const ws = new WebSocket('wss://yjs.dev/ws');
       
       ws.onopen = () => {
         console.log('WS OPENED SUCCESSFULLY!');
