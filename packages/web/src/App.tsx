@@ -240,9 +240,9 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         role: role || 'player',
         participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`
       });
-      store.connectSync(provider);
       setSyncStatus('connecting');
       provider.onStatusChange(setSyncStatus);
+      store.connectSync(provider);
     } catch (e) {
       console.error('LAN Connect Error:', e);
     }
@@ -258,9 +258,9 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
         token: 'placeholder-jwt'
       });
-      store.connectSync(provider);
       setSyncStatus('connecting');
       provider.onStatusChange(setSyncStatus);
+      store.connectSync(provider);
     } catch (e) {
       console.error('Cloud Connect Error:', e);
     }
