@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  // Mock config for now until ENV vars are provided
-  apiKey: "mock-api-key",
-  authDomain: "frogsworld-dev.firebaseapp.com",
-  projectId: "frogsworld-dev",
-  storageBucket: "frogsworld-dev.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: "AIzaSyCcLsf3ERBdcxsbNT7MzO8PcBRqaHIoqAk",
+  authDomain: "master-app-ee17a.firebaseapp.com",
+  projectId: "master-app-ee17a",
+  storageBucket: "master-app-ee17a.firebasestorage.app",
+  messagingSenderId: "876639423482",
+  appId: "1:876639423482:web:efe9957fa31c2fefe4b243",
+  measurementId: "G-5H9TH57MD9"
 };
 
 const app = initializeApp(firebaseConfig);
