@@ -96,7 +96,19 @@ export function SpellsCompendium({ role }: { role: 'dm' | 'player' | null }) {
   useEffect(() => {
     const q = query(collection(db, 'spells'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allSpells = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Spell));
+      const allSpells = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          name: String(data.name || ''),
+          school: String(data.school || ''),
+          castingTime: String(data.castingTime || ''),
+          range: String(data.range || ''),
+          duration: String(data.duration || ''),
+          description: String(data.description || '')
+        } as unknown as Spell;
+      });
       
       // Apply privacy rules on client side since Firestore OR queries require specific indices
       const userId = auth.currentUser?.uid;
@@ -115,12 +127,15 @@ export function SpellsCompendium({ role }: { role: 'dm' | 'player' | null }) {
 
   const filteredSpells = useMemo(() => {
     return spells.filter(s => {
-      if (searchQuery && !(s.name || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      const safeName = String(s.name || '');
+      const safeSchool = String(s.school || '');
+      
+      if (searchQuery && !safeName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (filterLevel !== 'all' && String(s.level) !== filterLevel) return false;
-      if (filterSchool !== 'all' && (s.school || '').toLowerCase() !== filterSchool.toLowerCase()) return false;
-      if (filterClass !== 'all' && !(s.classes || []).some(c => (c || '').toLowerCase() === filterClass.toLowerCase())) return false;
+      if (filterSchool !== 'all' && safeSchool.toLowerCase() !== filterSchool.toLowerCase()) return false;
+      if (filterClass !== 'all' && !(s.classes || []).some(c => String(c || '').toLowerCase() === filterClass.toLowerCase())) return false;
       return true;
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [spells, searchQuery, filterLevel, filterClass, filterSchool]);
 
   useEffect(() => {

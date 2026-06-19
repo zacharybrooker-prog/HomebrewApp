@@ -71,8 +71,17 @@ export function EquipmentCompendium({ role, store, activeCharId, characterProfil
   useEffect(() => {
     const q = query(collection(db, 'equipment'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EquipmentItem));
-      allItems.sort((a, b) => a.name.localeCompare(b.name));
+      const allItems = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          name: String(data.name || ''),
+          equipmentCategory: String(data.equipmentCategory || ''),
+          description: String(data.description || '')
+        } as unknown as EquipmentItem;
+      });
+      allItems.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       setItems(allItems);
     });
     return () => unsubscribe();
@@ -85,8 +94,11 @@ export function EquipmentCompendium({ role, store, activeCharId, characterProfil
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (filterCategory && item.equipmentCategory !== filterCategory) return false;
+      const safeName = String(item.name || '');
+      const safeCat = String(item.equipmentCategory || '');
+
+      if (search && !safeName.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterCategory && safeCat !== filterCategory) return false;
       return true;
     });
   }, [items, search, filterCategory]);

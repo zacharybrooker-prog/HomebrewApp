@@ -13,14 +13,23 @@ export function FeatsCompendium() {
     // No .limit() constraint! Pull the entire collection.
     const q = query(collection(db, 'feats'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allFeats = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Feat));
-      setFeats(allFeats.sort((a, b) => a.name.localeCompare(b.name)));
+      const allFeats = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          name: String(data.name || ''),
+          description: String(data.description || ''),
+          prerequisite: String(data.prerequisite || '')
+        } as unknown as Feat;
+      });
+      setFeats(allFeats.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))));
     });
     return () => unsubscribe();
   }, []);
 
   const filteredFeats = useMemo(() => {
-    return feats.filter(f => !searchQuery || f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return feats.filter(f => !searchQuery || String(f.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
   }, [feats, searchQuery]);
 
   return (

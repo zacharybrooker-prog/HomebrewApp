@@ -90,8 +90,18 @@ export function MagicItemsCompendium({ role, store, activeCharId, characterProfi
   useEffect(() => {
     const q = query(collection(db, 'magicItems'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MagicItem));
-      allItems.sort((a, b) => a.name.localeCompare(b.name));
+      const allItems = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          name: String(data.name || ''),
+          type: String(data.type || ''),
+          description: String(data.description || ''),
+          rarity: String(data.rarity || '')
+        } as unknown as MagicItem;
+      });
+      allItems.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       setItems(allItems);
     });
     return () => unsubscribe();
@@ -104,10 +114,14 @@ export function MagicItemsCompendium({ role, store, activeCharId, characterProfi
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (searchLetter && !item.name.toUpperCase().startsWith(searchLetter)) return false;
-      if (filterRarity && item.rarity !== filterRarity) return false;
-      if (filterType && item.type.toLowerCase() !== filterType.toLowerCase()) return false;
+      const safeName = String(item.name || '');
+      const safeType = String(item.type || '');
+      const safeRarity = String(item.rarity || '');
+
+      if (search && !safeName.toLowerCase().includes(search.toLowerCase())) return false;
+      if (searchLetter && !safeName.toUpperCase().startsWith(searchLetter)) return false;
+      if (filterRarity && safeRarity !== filterRarity) return false;
+      if (filterType && safeType.toLowerCase() !== filterType.toLowerCase()) return false;
       if (filterAttunement) {
         if (filterAttunement === 'yes' && !item.requiresAttunement) return false;
         if (filterAttunement === 'no' && item.requiresAttunement) return false;
@@ -117,7 +131,7 @@ export function MagicItemsCompendium({ role, store, activeCharId, characterProfi
   }, [items, search, searchLetter, filterRarity, filterType, filterAttunement]);
 
   const uniqueTypes = useMemo(() => {
-    const types = new Set(items.map(i => i.type));
+    const types = new Set(items.map(i => String(i.type || '')));
     return Array.from(types).sort();
   }, [items]);
 

@@ -151,11 +151,20 @@ export function FeaturesTraitsTab({ character, store }: { character: Character, 
     
     const q = query(collection(db, 'classFeatures'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allFeatures = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ClassFeature));
+      const allFeatures = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          name: String(data.name || ''),
+          className: String(data.className || ''),
+          description: String(data.description || '')
+        } as unknown as ClassFeature;
+      });
       
       // Filter by class and level
       const activeFeatures = allFeatures
-        .filter(f => (f.className || '').toLowerCase() === localClass.toLowerCase())
+        .filter(f => String(f.className || '').toLowerCase() === localClass.toLowerCase())
         .filter(f => f.levelRequired <= currentLevel)
         .sort((a, b) => b.levelRequired - a.levelRequired); // Descending
         
@@ -316,15 +325,24 @@ function FeatCompendiumModal({ onClose, character, store }: { onClose: () => voi
   useEffect(() => {
     const q = query(collection(db, 'feats'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allFeats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Feat));
-      allFeats.sort((a, b) => a.name.localeCompare(b.name));
+      const allFeats = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          name: String(data.name || ''),
+          description: String(data.description || ''),
+          prerequisite: String(data.prerequisite || '')
+        } as unknown as Feat;
+      });
+      allFeats.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       setFeats(allFeats);
     });
     return () => unsubscribe();
   }, []);
 
   const filteredFeats = useMemo(() => {
-    return feats.filter(f => !search || f.name.toLowerCase().includes(search.toLowerCase()));
+    return feats.filter(f => !search || String(f.name || '').toLowerCase().includes(search.toLowerCase()));
   }, [feats, search]);
 
   const handleLearnFeat = async (feat: Feat) => {
