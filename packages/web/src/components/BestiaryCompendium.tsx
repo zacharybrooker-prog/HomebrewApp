@@ -123,7 +123,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
             wis: data.WIS || "10", wis_mod: data.WIS_mod || "(+0)",
             cha: data.CHA || "10", cha_mod: data.CHA_mod || "(+0)",
           }
-        } as BestiaryItem;
+        } as unknown as BestiaryItem;
       });
       allItems.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setItems(allItems);
