@@ -103,7 +103,19 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
   useEffect(() => {
     const q = query(collection(db, 'bestiary'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BestiaryItem));
+      const allItems = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          cr: data.cr || data.Challenge || '',
+          hp: data.hp || data['Hit Points'] || '',
+          ac: data.ac || data['Armor Class'] || '',
+          size: data.size || (data.meta ? data.meta.split(' ')[0] : 'Medium'),
+          type: data.type || (data.meta ? data.meta.split(',')[0].split(' ').slice(1).join(' ') : 'Unknown'),
+          dexMod: data.dexMod || data.DEX_mod || '(+0)'
+        } as BestiaryItem;
+      });
       allItems.sort((a, b) => a.name.localeCompare(b.name));
       setItems(allItems);
     });
