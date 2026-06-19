@@ -108,24 +108,25 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
         return { 
           id: doc.id, 
           ...data,
+          name: String(data.name || 'Unknown Monster'),
           cr: String(data.cr || data.Challenge || ''),
           hp: String(data.hp || data['Hit Points'] || ''),
           ac: String(data.ac || data['Armor Class'] || ''),
-          size: String(data.size || (data.meta ? data.meta.split(' ')[0] : 'Medium')),
-          type: String(data.type || (data.meta ? data.meta.split(',')[0].split(' ').slice(1).join(' ') : 'Unknown')),
-          alignment: String(data.alignment || (data.meta ? (data.meta.split(',')[1] || '').trim() : 'Unknown')),
+          size: String(data.size || (data.meta ? String(data.meta).split(' ')[0] : 'Medium')),
+          type: String(data.type || (data.meta ? String(data.meta).split(',')[0].split(' ').slice(1).join(' ') : 'Unknown')),
+          alignment: String(data.alignment || (data.meta ? (String(data.meta).split(',')[1] || '').trim() : 'Unknown')),
           dexMod: String(data.dexMod || data.DEX_mod || '(+0)'),
-          stats: data.stats || {
-            str: data.STR || "10", str_mod: data.STR_mod || "(+0)",
-            dex: data.DEX || "10", dex_mod: data.DEX_mod || "(+0)",
-            con: data.CON || "10", con_mod: data.CON_mod || "(+0)",
-            int: data.INT || "10", int_mod: data.INT_mod || "(+0)",
-            wis: data.WIS || "10", wis_mod: data.WIS_mod || "(+0)",
-            cha: data.CHA || "10", cha_mod: data.CHA_mod || "(+0)",
+          stats: {
+            str: String(data.stats?.str || data.STR || "10"), str_mod: String(data.stats?.str_mod || data.STR_mod || "(+0)"),
+            dex: String(data.stats?.dex || data.DEX || "10"), dex_mod: String(data.stats?.dex_mod || data.DEX_mod || "(+0)"),
+            con: String(data.stats?.con || data.CON || "10"), con_mod: String(data.stats?.con_mod || data.CON_mod || "(+0)"),
+            int: String(data.stats?.int || data.INT || "10"), int_mod: String(data.stats?.int_mod || data.INT_mod || "(+0)"),
+            wis: String(data.stats?.wis || data.WIS || "10"), wis_mod: String(data.stats?.wis_mod || data.WIS_mod || "(+0)"),
+            cha: String(data.stats?.cha || data.CHA || "10"), cha_mod: String(data.stats?.cha_mod || data.CHA_mod || "(+0)"),
           }
         } as unknown as BestiaryItem;
       });
-      allItems.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      allItems.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       setItems(allItems);
     });
     return () => unsubscribe();
@@ -140,12 +141,12 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
       // Visibility:
       if (role !== 'dm' && !item.isRevealed) return false;
 
-      if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (searchLetter && !item.name.toUpperCase().startsWith(searchLetter)) return false;
+      if (search && !String(item.name).toLowerCase().includes(search.toLowerCase())) return false;
+      if (searchLetter && !String(item.name).toUpperCase().startsWith(searchLetter)) return false;
       
-      if (filterCR && !item.cr.includes(filterCR)) return false;
-      if (filterSize && item.size.toLowerCase() !== filterSize.toLowerCase()) return false;
-      if (filterType && item.type.toLowerCase() !== filterType.toLowerCase()) return false;
+      if (filterCR && !String(item.cr).includes(filterCR)) return false;
+      if (filterSize && String(item.size).toLowerCase() !== filterSize.toLowerCase()) return false;
+      if (filterType && String(item.type).toLowerCase() !== filterType.toLowerCase()) return false;
       
       return true;
     });
@@ -153,7 +154,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
 
   const uniqueCRs = useMemo(() => {
     // Extract CR strings, handle "1/4", "10", etc.
-    const crs = new Set(items.map(i => i.cr.split(' ')[0])); // "10 (5,900 XP)" -> "10"
+    const crs = new Set(items.map(i => String(i.cr || '').split(' ')[0])); // "10 (5,900 XP)" -> "10"
     return Array.from(crs).sort((a, b) => {
       const parseFraction = (s: string) => {
         if (!s.includes('/')) return parseFloat(s) || 0;
@@ -166,8 +167,8 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
     });
   }, [items]);
   
-  const uniqueSizes = useMemo(() => Array.from(new Set(items.map(i => i.size))).sort(), [items]);
-  const uniqueTypes = useMemo(() => Array.from(new Set(items.map(i => i.type))).sort(), [items]);
+  const uniqueSizes = useMemo(() => Array.from(new Set(items.map(i => String(i.size || '')))).sort(), [items]);
+  const uniqueTypes = useMemo(() => Array.from(new Set(items.map(i => String(i.type || '')))).sort(), [items]);
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / 10));
   const safePage = Math.min(currentPage, totalPages);
@@ -185,7 +186,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
 
   const rollInitiative = (dexModString: string) => {
     // e.g., "(+2)" -> 2, "(-1)" -> -1
-    const match = dexModString.match(/[-+]\d+/);
+    const match = String(dexModString || '').match(/[-+]\d+/);
     const mod = match ? parseInt(match[0], 10) : 0;
     return Math.floor(Math.random() * 20) + 1 + mod;
   };
@@ -194,11 +195,11 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
     if (!selectedItem) return;
     
     // Parse HP: e.g. "135 (18d10 + 36)" -> 135
-    const hpMatch = selectedItem.hp.match(/^\d+/);
+    const hpMatch = String(selectedItem.hp || '').match(/^\d+/);
     const hpVal = hpMatch ? parseInt(hpMatch[0], 10) : 10;
     
     // Parse AC: e.g. "17 (Natural Armor)" -> 17
-    const acMatch = selectedItem.ac.match(/^\d+/);
+    const acMatch = String(selectedItem.ac || '').match(/^\d+/);
     const acVal = acMatch ? parseInt(acMatch[0], 10) : 10;
 
     const init = rollInitiative(selectedItem.stats.dex_mod);
@@ -316,7 +317,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
                 </button>
               )}
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full border border-[var(--border-accent)] bg-black/50 text-[10px] font-bold uppercase tracking-widest text-secondary">
-                CR {item.cr.split(' ')[0]}
+                CR {String(item.cr || '').split(' ')[0]}
               </span>
             </div>
           </div>
