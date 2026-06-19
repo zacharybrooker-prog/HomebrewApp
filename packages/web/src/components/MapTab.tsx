@@ -174,6 +174,43 @@ export function MapTab({ store, role, campaignId }: { store: CampaignStore, role
     } catch (err) {}
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const target = e.target as HTMLElement;
+    
+    if (target.closest('.map-pin') || target.closest('.banner-controls')) {
+      if (target.closest('.map-pin')) {
+        const pinEl = target.closest('.map-pin') as HTMLElement;
+        setDraggingPinId(pinEl.dataset.pinid || null);
+      }
+      return;
+    }
+
+    setIsDragging(true);
+    setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+
+    if (draggingPinId && mapRef.current) {
+      const rect = mapRef.current.getBoundingClientRect();
+      const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+      const y = ((e.touches[0].clientY - rect.top) / rect.height) * 100;
+      store.updateMapPin(draggingPinId, { x, y });
+      return;
+    }
+
+    if (isDragging) {
+      setPan({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setDraggingPinId(null);
+  };
+
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (!mapRef.current || !currentMapId) return;
     const rect = mapRef.current.getBoundingClientRect();
@@ -253,12 +290,15 @@ export function MapTab({ store, role, campaignId }: { store: CampaignStore, role
       ) : (
         <div 
           ref={containerRef}
-          className="flex-1 overflow-hidden relative cursor-grab active:cursor-grabbing bg-[#050505] pt-12"
+          className="flex-1 overflow-hidden relative cursor-grab active:cursor-grabbing bg-[#050505] pt-12 touch-none"
           onWheel={handleWheel}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           onDoubleClick={handleDoubleClick}
         >
           <div 

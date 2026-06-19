@@ -472,11 +472,11 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             {/* DM Time Controls */}
             {role === 'dm' && (
               <div className="flex items-center gap-1 ml-2">
-                <button onClick={() => timeState.isRunning ? store.pauseClock() : store.playClock()} className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs">
+                <button onClick={() => timeState.isRunning ? store.pauseClock() : store.playClock()} className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs min-h-[44px] min-w-[44px]">
                   {timeState.isRunning ? '⏸' : '▶'}
                 </button>
                 <select 
-                  className="bg-black/50 border border-white/20 rounded text-xs text-white p-1 outline-none"
+                  className="bg-black/50 border border-white/20 rounded text-xs text-white p-1 outline-none min-h-[44px]"
                   value={timeState.timeScale || 60}
                   onChange={e => store.setTimeScale(Number(e.target.value))}
                 >
@@ -489,8 +489,8 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
           </div>
           {/* Dynamic Campaign Name */}
           {campaignId && (
-            <div className="hidden md:block truncate ml-4">
-              <span style={{ fontFamily: 'var(--font-decorative)', fontSize: '1.25rem', fontWeight: 900, letterSpacing: '0.08em', color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)' }}>
+            <div className="hidden sm:block truncate ml-4 max-w-[150px] md:max-w-[300px]">
+              <span className="truncate block" style={{ fontFamily: 'var(--font-decorative)', fontSize: '1.25rem', fontWeight: 900, letterSpacing: '0.08em', color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)' }}>
                 {campaignId}
               </span>
             </div>
@@ -510,13 +510,13 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         <div className="flex items-center justify-end gap-4 flex-1 min-w-0">
           {role === 'dm' && (
             <div className="hidden md:flex bg-black/50 border border-white/20 rounded divide-x divide-white/20 text-[10px] uppercase font-bold tracking-wider shrink-0">
-              <button onClick={() => handleAdvanceTime(1)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-gold">+6h</button>
-              <button onClick={() => handleAdvanceTime(2)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70">+12h</button>
-              <button onClick={() => handleAdvanceTime(4)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70">+24h</button>
+              <button onClick={() => handleAdvanceTime(1)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-gold min-h-[44px]">+6h</button>
+              <button onClick={() => handleAdvanceTime(2)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70 min-h-[44px]">+12h</button>
+              <button onClick={() => handleAdvanceTime(4)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70 min-h-[44px]">+24h</button>
               <button onClick={() => {
                   const daysInWeek = calendarConfig ? calendarConfig.weekdays.length : 7;
                   handleAdvanceTime(4 * daysInWeek);
-                }} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-secondary">+1w</button>
+                }} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-secondary min-h-[44px]">+1w</button>
             </div>
           )}
           <div className="flex flex-col items-end leading-none justify-center shrink-0">
@@ -562,7 +562,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                     {activeGlobalEffect.description && <div className="text-sm text-blue-100/70 mt-1 whitespace-pre-wrap">{activeGlobalEffect.description}</div>}
                   </div>
                   {role === 'dm' && (
-                    <button onClick={() => store.setActiveGlobalEffect(null)} className="btn-ghost text-red-400 border-red-500/30 text-xs py-1 px-2 hover:bg-red-500/20">
+                    <button onClick={() => store.setActiveGlobalEffect(null)} className="btn-ghost text-red-400 border-red-500/30 text-xs py-1 px-2 hover:bg-red-500/20 min-h-[44px]">
                       Clear
                     </button>
                   )}
@@ -581,7 +581,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                     {encounter.description && <div className="text-sm text-red-100/70 mt-1 whitespace-pre-wrap">{encounter.description}</div>}
                   </div>
                   {role === 'dm' && (
-                    <button onClick={() => store.removeActiveEncounter(encounter.id)} className="btn-ghost text-red-400 border-red-500/30 text-xs py-1 px-2 hover:bg-red-500/20">
+                    <button onClick={() => store.removeActiveEncounter(encounter.id)} className="btn-ghost text-red-400 border-red-500/30 text-xs py-1 px-2 hover:bg-red-500/20 min-h-[44px]">
                       Clear
                     </button>
                   )}
@@ -607,22 +607,22 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             <div className="flex gap-2">
               {role === 'dm' && (
                 <>
-                  <button onClick={() => setShowSettings(true)} className="btn-ghost" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
+                  <button onClick={() => setShowSettings(true)} className="btn-ghost min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
                     ⚙️ Settings
                   </button>
-                  <button onClick={() => setShowItemManager(true)} className="btn-fantasy" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
+                  <button onClick={() => setShowItemManager(true)} className="btn-fantasy min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
                     🎁 Loot
                   </button>
                   <button 
                     onClick={() => store.setBloodMoon(!bloodMoon)} 
-                    className={`blood-moon-toggle ${bloodMoon ? 'active' : ''}`}
+                    className={`blood-moon-toggle ${bloodMoon ? 'active' : ''} min-h-[44px] min-w-[44px]`}
                     title={bloodMoon ? 'Deactivate Blood Moon' : 'Activate Blood Moon'}
                   >
                     <div className="moon-icon" />
                   </button>
                 </>
               )}
-              <button onClick={() => { setRole(null); setActiveCharId(null); }} className="btn-ghost">
+              <button onClick={() => { setRole(null); setActiveCharId(null); }} className="btn-ghost min-h-[44px]">
                 Exit
               </button>
             </div>
@@ -646,15 +646,15 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
               </div>
               {syncStatus !== 'connected' ? (
                 <div className="flex gap-2">
-                  <button onClick={handleConnectLan} className="btn-fantasy" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
+                  <button onClick={handleConnectLan} className="btn-fantasy min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
                     Connect LAN
                   </button>
-                  <button onClick={handleConnectCloud} className="btn-gold" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
+                  <button onClick={handleConnectCloud} className="btn-gold min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
                     Connect Cloud
                   </button>
                 </div>
               ) : (
-                <button onClick={handleDisconnect} className="btn-danger" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
+                <button onClick={handleDisconnect} className="btn-danger min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
                   Disconnect
                 </button>
               )}
@@ -686,7 +686,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                     setActiveTab(tab as any);
                   }
                 }}
-                className={`master-grid-btn ${activeTab === tab && tab !== 'glossary' ? 'active' : ''}`}
+                className={`master-grid-btn min-h-[44px] ${activeTab === tab && tab !== 'glossary' ? 'active' : ''}`}
               >
                 <div className="icon">{TAB_ICONS[tab] || '⭐'}</div>
                 <div className="text-[10px] uppercase tracking-widest font-bold mt-1">{tab}</div>
@@ -714,16 +714,16 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                 </select>
               </div>
               <div className="flex gap-3">
-                <button onClick={handleToggleLock} className="btn-danger flex-1">
+                <button onClick={handleToggleLock} className="btn-danger flex-1 min-h-[44px]">
                   {locked ? '🔒 Unlock' : '🔓 Lock'}
                 </button>
               </div>
               
               <div className="flex gap-3">
-                <button disabled className="btn-ghost flex-1 opacity-40 cursor-not-allowed" style={{ fontSize: '11px' }}>
+                <button disabled className="btn-ghost flex-1 opacity-40 cursor-not-allowed min-h-[44px]" style={{ fontSize: '11px' }}>
                   ⭐ Custom Calendar
                 </button>
-                <button disabled className="btn-ghost flex-1 opacity-40 cursor-not-allowed" style={{ fontSize: '11px' }}>
+                <button disabled className="btn-ghost flex-1 opacity-40 cursor-not-allowed min-h-[44px]" style={{ fontSize: '11px' }}>
                   ⭐ Custom Cycles
                 </button>
               </div>
@@ -755,7 +755,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                       <div key={cond} className="relative">
                         <button
                           onClick={() => setActivePopover({ condition: cond })}
-                          className="text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full border shadow-sm transition-colors"
+                          className="text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full border shadow-sm transition-colors min-h-[44px]"
                           style={{
                             backgroundColor: 'rgba(234, 179, 8, 0.15)',
                             color: '#eab308',

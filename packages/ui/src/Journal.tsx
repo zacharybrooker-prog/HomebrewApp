@@ -259,13 +259,13 @@ export function Journal({
     <div className="p-4 flex flex-col h-full">
       <div className="flex gap-2 mb-6 border-b border-[var(--border)] pb-2">
         <button 
-          className={`tab-pill ${tab === 'notes' ? 'tab-pill-active' : ''}`}
+          className={`tab-pill min-h-[44px] ${tab === 'notes' ? 'tab-pill-active' : ''}`}
           onClick={() => { setTab('notes'); setEditingNoteId(null); setEditingHandoutId(null); }}
         >
           My Private Notes
         </button>
         <button 
-          className={`tab-pill ${tab === 'handouts' ? 'tab-pill-active' : ''}`}
+          className={`tab-pill min-h-[44px] ${tab === 'handouts' ? 'tab-pill-active' : ''}`}
           onClick={() => { setTab('handouts'); setEditingNoteId(null); setEditingHandoutId(null); }}
         >
           Handouts
@@ -273,9 +273,9 @@ export function Journal({
       </div>
 
       {tab === 'notes' && (
-        <div className="flex-1 flex gap-4 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
           {/* LEFT COLUMN: Master List */}
-          <div className="w-1/3 flex flex-col gap-4 border-r border-[var(--border)] pr-4">
+          <div className={`${selectedNoteId || editingNoteId ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 flex-col gap-4 md:border-r border-[var(--border)] md:pr-4`}>
             <div className="flex flex-col gap-2">
               <input 
                 type="text" 
@@ -291,7 +291,7 @@ export function Journal({
                 value={searchDate}
                 onChange={e => setSearchDate(e.target.value)}
               />
-              <button className="btn-fantasy py-2 mt-2" onClick={handleCreateNote}>
+              <button className="btn-fantasy py-2 mt-2 min-h-[44px]" onClick={handleCreateNote}>
                 + New Journal Entry
               </button>
             </div>
@@ -302,7 +302,7 @@ export function Journal({
                 return (
                   <div 
                     key={note.id} 
-                    className={`p-3 border rounded cursor-pointer transition-colors ${isSelected ? 'bg-secondary/20 border-secondary' : 'glass-panel hover:bg-white/5 border-transparent'}`}
+                    className={`p-4 border rounded cursor-pointer transition-colors min-h-[44px] ${isSelected ? 'bg-secondary/20 border-secondary' : 'glass-panel hover:bg-white/5 border-transparent'}`}
                     onClick={() => {
                       setSelectedNoteId(note.id);
                       if (editingNoteId) setEditingNoteId(null);
@@ -324,12 +324,15 @@ export function Journal({
           </div>
 
           {/* RIGHT COLUMN: Detail View */}
-          <div className="w-2/3 flex flex-col bg-gray-900/50 rounded-lg border border-[var(--border)] overflow-hidden relative">
+          <div className={`${!(selectedNoteId || editingNoteId) ? 'hidden md:flex' : 'flex'} w-full md:w-2/3 flex-col bg-gray-900/50 rounded-lg border border-[var(--border)] overflow-hidden relative`}>
             {editingNoteId ? (
               // EDIT MODE
               <div className="p-6 flex flex-col gap-4 flex-1 overflow-y-auto custom-scrollbar">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-bold text-accent">Editing Entry</h3>
+                  <div className="flex items-center gap-2">
+                    <button className="md:hidden btn-ghost px-2 py-1 min-h-[44px]" onClick={() => setEditingNoteId(null)}>← Back</button>
+                    <h3 className="font-bold text-accent">Editing Entry</h3>
+                  </div>
                 </div>
                 <input 
                   type="text" 
@@ -359,7 +362,7 @@ export function Journal({
                     type="button"
                     onClick={hasSpeechSupport ? toggleRecording : undefined}
                     disabled={!hasSpeechSupport}
-                    className={`absolute right-4 bottom-4 p-3 rounded-full border transition-all z-10 shadow-lg ${
+                    className={`absolute right-4 bottom-4 p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full border transition-all z-10 shadow-lg ${
                       !hasSpeechSupport 
                         ? 'border-gray-700 text-gray-600 bg-gray-900/50 cursor-not-allowed'
                         : isRecording 
@@ -378,8 +381,8 @@ export function Journal({
                   />
                 </div>
                 <div className="flex justify-end gap-2 mt-2">
-                  <button className="btn-ghost" onClick={() => setEditingNoteId(null)}>Cancel</button>
-                  <button className="btn-fantasy" onClick={handleCommitNote}>Save Entry</button>
+                  <button className="btn-ghost min-h-[44px]" onClick={() => setEditingNoteId(null)}>Cancel</button>
+                  <button className="btn-fantasy min-h-[44px]" onClick={handleCommitNote}>Save Entry</button>
                 </div>
               </div>
             ) : selectedNoteId ? (
@@ -396,18 +399,21 @@ export function Journal({
                 return (
                   <div className="p-8 flex flex-col flex-1 overflow-y-auto custom-scrollbar">
                     <div className="flex justify-between items-start mb-6 border-b border-[var(--border)] pb-4">
-                      <div>
-                        <h2 className="text-3xl font-bold text-accent font-serif mb-1">{note.title}</h2>
-                        {(note.inGameDateString || note.inGameDayNumber !== undefined) && (
-                          <div className="text-sm text-muted-foreground italic">
-                            {note.inGameDateString} {note.inGameDayNumber !== undefined && `(Day ${note.inGameDayNumber})`}
-                          </div>
-                        )}
+                      <div className="flex flex-col items-start gap-2">
+                        <button className="md:hidden btn-ghost px-2 py-1 min-h-[44px] -ml-2" onClick={() => setSelectedNoteId(null)}>← Back</button>
+                        <div>
+                          <h2 className="text-3xl font-bold text-accent font-serif mb-1">{note.title}</h2>
+                          {(note.inGameDateString || note.inGameDayNumber !== undefined) && (
+                            <div className="text-sm text-muted-foreground italic">
+                              {note.inGameDateString} {note.inGameDayNumber !== undefined && `(Day ${note.inGameDayNumber})`}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="btn-ghost text-xs" onClick={() => handleEditNote(note)}>Edit</button>
+                        <button className="btn-ghost text-xs min-h-[44px]" onClick={() => handleEditNote(note)}>Edit</button>
                         <button 
-                          className="btn-ghost text-xs text-red-500 hover:text-red-400"
+                          className="btn-ghost text-xs text-red-500 hover:text-red-400 min-h-[44px]"
                           onClick={() => {
                             if (confirm('Delete this entry?')) {
                               onDeleteNote(note.id);
@@ -441,7 +447,7 @@ export function Journal({
             <>
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-muted-foreground">Campaign Handouts</h3>
-                <button className="btn-fantasy py-1 px-3 text-xs" onClick={handleCreateHandout}>+ New Handout</button>
+                <button className="btn-fantasy py-1 px-3 text-xs min-h-[44px]" onClick={handleCreateHandout}>+ New Handout</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {handouts.map(handout => (
@@ -449,7 +455,7 @@ export function Journal({
                     <div className="flex justify-between items-start">
                       <h4 className="font-bold cursor-pointer hover:text-accent" onClick={() => handleEditHandout(handout)}>{handout.title}</h4>
                       <button 
-                        className="text-red-500 hover:text-red-400 text-xs"
+                        className="text-red-500 hover:text-red-400 text-xs min-h-[44px] p-2"
                         onClick={(e) => { e.stopPropagation(); onDeleteHandout(handout.id); }}
                       >
                         Delete
@@ -491,7 +497,7 @@ export function Journal({
                   <div className="relative group">
                     <img src={imageBase64} className="max-h-48 rounded border border-[var(--border)]" />
                     <button 
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded p-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded p-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity min-h-[44px] min-w-[44px]"
                       onClick={() => setImageBase64(undefined)}
                     >
                       Remove
@@ -515,8 +521,8 @@ export function Journal({
                 onChange={e => setContent(e.target.value)}
               />
               <div className="flex justify-end gap-2 mt-2">
-                <button className="btn-ghost" onClick={() => setEditingHandoutId(null)}>Cancel</button>
-                <button className="btn-fantasy" onClick={handleCommitHandout}>Save Handout</button>
+                <button className="btn-ghost min-h-[44px]" onClick={() => setEditingHandoutId(null)}>Cancel</button>
+                <button className="btn-fantasy min-h-[44px]" onClick={handleCommitHandout}>Save Handout</button>
               </div>
             </div>
           )}
