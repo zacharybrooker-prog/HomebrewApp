@@ -108,15 +108,24 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
         return { 
           id: doc.id, 
           ...data,
-          cr: data.cr || data.Challenge || '',
-          hp: data.hp || data['Hit Points'] || '',
-          ac: data.ac || data['Armor Class'] || '',
-          size: data.size || (data.meta ? data.meta.split(' ')[0] : 'Medium'),
-          type: data.type || (data.meta ? data.meta.split(',')[0].split(' ').slice(1).join(' ') : 'Unknown'),
-          dexMod: data.dexMod || data.DEX_mod || '(+0)'
+          cr: String(data.cr || data.Challenge || ''),
+          hp: String(data.hp || data['Hit Points'] || ''),
+          ac: String(data.ac || data['Armor Class'] || ''),
+          size: String(data.size || (data.meta ? data.meta.split(' ')[0] : 'Medium')),
+          type: String(data.type || (data.meta ? data.meta.split(',')[0].split(' ').slice(1).join(' ') : 'Unknown')),
+          alignment: String(data.alignment || (data.meta ? (data.meta.split(',')[1] || '').trim() : 'Unknown')),
+          dexMod: String(data.dexMod || data.DEX_mod || '(+0)'),
+          stats: data.stats || {
+            str: data.STR || "10", str_mod: data.STR_mod || "(+0)",
+            dex: data.DEX || "10", dex_mod: data.DEX_mod || "(+0)",
+            con: data.CON || "10", con_mod: data.CON_mod || "(+0)",
+            int: data.INT || "10", int_mod: data.INT_mod || "(+0)",
+            wis: data.WIS || "10", wis_mod: data.WIS_mod || "(+0)",
+            cha: data.CHA || "10", cha_mod: data.CHA_mod || "(+0)",
+          }
         } as BestiaryItem;
       });
-      allItems.sort((a, b) => a.name.localeCompare(b.name));
+      allItems.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setItems(allItems);
     });
     return () => unsubscribe();
