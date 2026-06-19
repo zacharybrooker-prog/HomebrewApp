@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import type { StatFieldDef, CharacterProfile, Item, StatusInstance, CalendarConfig, ItemTemplate, Note, Handout, GlobalEffect, MapPin, CombatState } from './schema';
+import type { StatFieldDef, CharacterProfile, Item, StatusInstance, CalendarConfig, ItemTemplate, Note, Handout, GlobalEffect, MapPin, CombatState, TimeState } from './schema';
 import { NoteSchema, HandoutSchema } from './schema';
 import { computeEffects, computeRevertEffects, type EffectMutation } from './effects/engine';
 
@@ -46,23 +46,19 @@ export class CampaignStore {
     return this.doc.getMap(`character:${characterId}`);
   }
 
-  // --- Interactive Map ---
-  public getMapState(): Y.Map<any> {
-    return this.doc.getMap('interactive_map_state');
+  // --- Location ---
+  public getLocationName(): string {
+    return this.getSharedMap().get('locationName') || 'Unknown Location';
   }
 
+  public setLocationName(name: string) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    this.getSharedMap().set('locationName', name);
+  }
+
+  // --- Interactive Map ---
   public getMapPins(): Y.Map<MapPin> {
     return this.doc.getMap('interactive_map_pins');
-  }
-
-  public setMapImage(base64: string | null) {
-    if (this.role !== 'dm') throw new Error('Unauthorized: Only DM can set the map image');
-    const state = this.getMapState();
-    if (base64) {
-      state.set('image', base64);
-    } else {
-      state.delete('image');
-    }
   }
 
   public addMapPin(pin: MapPin) {
@@ -101,9 +97,15 @@ export class CampaignStore {
     const charMap = this.getCharacterMap(id);
     charMap.set('stats', { ac, init });
     charMap.set('hp', { current: maxHp, max: maxHp });
-    charMap.set('currencies', {});
-    charMap.set('inventory', []);
     charMap.set('statuses', []);
+    charMap.set('mainStorage', []);
+    charMap.set('extraPlanarStorage', []);
+    charMap.set('equipment', {
+      head: null, mask: null, torso: null, hands: null,
+      belt: null, feet: null, ring1: null, ring2: null,
+      amulet: null, mainHand: null, offHand: null
+    });
+    charMap.set('conditions', []);
     return id;
   }
 
@@ -342,55 +344,140 @@ export class CampaignStore {
     }, 'effect-engine');
   }
 
-  public toggleItemEquip(charId: string, itemId: string) {
+  public equipItem(charId: string, itemId: string, targetSlot: string) {
     const shared = this.getSharedMap();
-    if (this.role === 'player' && shared.get('locked')) {
-      throw new Error('Sheet is locked by DM');
-    }
-    const charMap = this.getCharacterMap(charId);
-    const inventory: Item[] = charMap.get('inventory') || [];
+    if (this.role === 'player' && shared.get('locked')) throw new Error('Sheet is locked by DM');
     
-    let targetItem: Item | undefined;
-    const newInventory = inventory.map(item => {
-      if (item.id === itemId) {
-        const toggled = { ...item, equipped: !item.equipped };
-        targetItem = toggled;
-        return toggled;
-      }
-      return item;
-    });
-
-    if (!targetItem) return;
-
-    if (targetItem.equipped) {
-      // Equipping: calculate effect mutations and generate revertData
-      const { mutations, revertData } = computeEffects(targetItem.effectsOnEquip, { sourceId: charId, store: this });
-      // Update item with revertData BEFORE saving to doc so we have it for later
-      const finalizedInventory = newInventory.map(i => i.id === itemId ? { ...i, revertData } : i);
-      charMap.set('inventory', finalizedInventory);
-      this.commitMutations(mutations);
-    } else {
-      // Unequipping: calculate reverse mutations
-      const oldItem = inventory.find(i => i.id === itemId)!;
-      if (oldItem.revertData) {
-        const mutations = computeRevertEffects(oldItem.effectsOnEquip, { sourceId: charId, store: this }, oldItem.revertData);
-        const finalizedInventory = newInventory.map(i => i.id === itemId ? { ...i, revertData: undefined } : i);
-        charMap.set('inventory', finalizedInventory);
-        this.commitMutations(mutations);
-      } else {
-        charMap.set('inventory', newInventory);
-      }
+    const charMap = this.getCharacterMap(charId);
+    let mainStorage: Item[] = charMap.get('mainStorage') || [];
+    let extraPlanarStorage: Item[] = charMap.get('extraPlanarStorage') || [];
+    let equipment = charMap.get('equipment') || {};
+    
+    let targetItem = mainStorage.find(i => i.id === itemId);
+    let sourceArray = 'main';
+    if (!targetItem) {
+       targetItem = extraPlanarStorage.find(i => i.id === itemId);
+       sourceArray = 'extra';
     }
+    
+    if (!targetItem) return;
+    
+    if (sourceArray === 'main') {
+       mainStorage = mainStorage.filter(i => i.id !== itemId);
+    } else {
+       extraPlanarStorage = extraPlanarStorage.filter(i => i.id !== itemId);
+    }
+    
+    const occupant = equipment[targetSlot];
+    if (occupant) {
+       if (occupant.revertData) {
+         const revMutations = computeRevertEffects(occupant.effectsOnEquip || [], { sourceId: charId, store: this }, occupant.revertData);
+         this.commitMutations(revMutations);
+       }
+       const unequippedItem = { ...occupant, revertData: undefined, equipped: false };
+       if (mainStorage.length < 15) {
+         mainStorage.push(unequippedItem);
+       } else {
+         extraPlanarStorage.push(unequippedItem);
+       }
+    }
+    
+    targetItem.equipped = true;
+    const { mutations, revertData } = computeEffects(targetItem.effectsOnEquip || [], { sourceId: charId, store: this });
+    targetItem.revertData = revertData;
+    this.commitMutations(mutations);
+    
+    equipment = { ...equipment, [targetSlot]: targetItem };
+    
+    charMap.set('mainStorage', mainStorage);
+    charMap.set('extraPlanarStorage', extraPlanarStorage);
+    charMap.set('equipment', equipment);
+  }
+
+  public unequipItem(charId: string, targetSlot: string) {
+    const shared = this.getSharedMap();
+    if (this.role === 'player' && shared.get('locked')) throw new Error('Sheet is locked by DM');
+    
+    const charMap = this.getCharacterMap(charId);
+    const mainStorage: Item[] = charMap.get('mainStorage') || [];
+    const extraPlanarStorage: Item[] = charMap.get('extraPlanarStorage') || [];
+    let equipment = charMap.get('equipment') || {};
+    
+    const occupant = equipment[targetSlot];
+    if (!occupant) return;
+    
+    if (occupant.revertData) {
+       const revMutations = computeRevertEffects(occupant.effectsOnEquip || [], { sourceId: charId, store: this }, occupant.revertData);
+       this.commitMutations(revMutations);
+    }
+    const unequippedItem = { ...occupant, revertData: undefined, equipped: false };
+    
+    if (mainStorage.length < 15) {
+      mainStorage.push(unequippedItem);
+    } else {
+      extraPlanarStorage.push(unequippedItem);
+    }
+    
+    equipment = { ...equipment, [targetSlot]: null };
+    
+    charMap.set('mainStorage', mainStorage);
+    charMap.set('extraPlanarStorage', extraPlanarStorage);
+    charMap.set('equipment', equipment);
   }
 
   public advanceTime(blocks: number) {
     if (this.role !== 'dm') throw new Error('Unauthorized');
-    const shared = this.getSharedMap();
-    const original = shared.get('timeState') as { blocks: number } | undefined;
-    const timeState = original ? structuredClone(original) : { blocks: 0 };
-    timeState.blocks += blocks;
-    shared.set('timeState', timeState);
+    this.doc.transact(() => {
+      const shared = this.getSharedMap();
+      const original = shared.get('timeState') as TimeState | undefined;
+      const timeState: TimeState = original ? structuredClone(original) : { blocks: 0 };
+      
+      timeState.blocks += blocks;
+      
+      // Jump the real-time clock forward by exactly `blocks`
+      const BLOCK_MS = 6 * 60 * 60 * 1000;
+      if (timeState.gameTimeMs !== undefined) {
+        // Calculate any elapsed running time before resetting the anchor
+        if (timeState.isRunning && timeState.lastRealTimeMs) {
+          const elapsedReal = Date.now() - timeState.lastRealTimeMs;
+          timeState.gameTimeMs += elapsedReal * (timeState.timeScale || 60);
+        }
+        timeState.gameTimeMs += blocks * BLOCK_MS;
+        timeState.lastRealTimeMs = Date.now();
+      } else {
+        timeState.gameTimeMs = timeState.blocks * BLOCK_MS;
+        timeState.lastRealTimeMs = Date.now();
+        timeState.timeScale = 60;
+        timeState.isRunning = false;
+      }
 
+      shared.set('timeState', timeState);
+      this._applyTimePassage(blocks, timeState);
+    });
+  }
+
+  public syncNaturalTime(currentVisualTimeMs: number) {
+    if (this.role !== 'dm') return;
+    this.doc.transact(() => {
+      const shared = this.getSharedMap();
+      const original = shared.get('timeState') as TimeState | undefined;
+      if (!original) return;
+      
+      const BLOCK_MS = 6 * 60 * 60 * 1000;
+      const expectedBlocks = Math.floor(currentVisualTimeMs / BLOCK_MS);
+      
+      if (expectedBlocks > original.blocks) {
+        const timeState = structuredClone(original);
+        const blocksPassed = expectedBlocks - timeState.blocks;
+        
+        timeState.blocks = expectedBlocks;
+        shared.set('timeState', timeState);
+        this._applyTimePassage(blocksPassed, timeState);
+      }
+    });
+  }
+
+  private _applyTimePassage(blocks: number, timeState: TimeState) {
     // 2. Tick Statuses
     for (const key of this.doc.share.keys()) {
       if (key.startsWith('character:')) {
@@ -398,11 +485,11 @@ export class CampaignStore {
         const charMap = this.getCharacterMap(charId);
         const statuses: StatusInstance[] = charMap.get('statuses') || [];
         
-        let changed = false;
+        let changedStatuses = false;
         const newStatuses = statuses.map(s => {
           if (s.remaining !== undefined) {
             s.remaining -= blocks;
-            changed = true;
+            changedStatuses = true;
           }
           return s;
         }).filter(s => {
@@ -412,14 +499,38 @@ export class CampaignStore {
               const mutations = computeRevertEffects(s.effects, { sourceId: charId, store: this }, s.revertData);
               this.commitMutations(mutations);
             }
-            changed = true;
+            changedStatuses = true;
             return false;
           }
           return true;
         });
 
-        if (changed) {
+        if (changedStatuses) {
           charMap.set('statuses', newStatuses);
+        }
+
+        // 3. Auto-Progress Curses/Afflictions
+        const afflictions: any[] = charMap.get('afflictions') || [];
+        
+        let changedAfflictions = false;
+        const newAfflictions = afflictions.map(a => {
+          if (!a.autoProgressIntervalBlocks || a.autoProgressIntervalBlocks <= 0) return a;
+          if (a.currentStage >= a.maxStages) return a;
+
+          const lastBlock = a.lastProgressedAtBlock ?? (timeState.blocks - blocks);
+          const blocksPassed = timeState.blocks - lastBlock;
+          
+          if (blocksPassed >= a.autoProgressIntervalBlocks) {
+            const intervals = Math.floor(blocksPassed / a.autoProgressIntervalBlocks);
+            a.currentStage = Math.min(a.maxStages, a.currentStage + intervals);
+            a.lastProgressedAtBlock = lastBlock + (intervals * a.autoProgressIntervalBlocks);
+            changedAfflictions = true;
+          }
+          return a;
+        });
+
+        if (changedAfflictions) {
+          charMap.set('afflictions', newAfflictions);
         }
       }
     }
@@ -501,8 +612,9 @@ export class CampaignStore {
     for (const profile of profiles) {
       const charMap = this.getCharacterMap(profile.id);
       const hp = charMap.get('hp') || { current: 10, max: 10 };
-      const stats = charMap.get('stats') || { init: 10, ac: 10 };
+      const stats = charMap.get('stats') || {};
       const statuses = charMap.get('statuses') || [];
+      const conditions = charMap.get('conditions') || [];
       
       const existingIdx = combatState.combatants.findIndex((c: any) => c.id === profile.id);
       if (existingIdx === -1) {
@@ -514,7 +626,8 @@ export class CampaignStore {
           initiative: stats.init || 10,
           ac: stats.ac || 10,
           hp: { ...hp },
-          statuses: [...statuses]
+          statuses: [...statuses],
+          conditions: [...conditions]
         });
       } else {
         combatState.combatants[existingIdx].initiative = stats.init || 10;
@@ -603,7 +716,7 @@ export class CampaignStore {
     const shared = this.getSharedMap();
     const original = shared.get('combatState') as CombatState;
     const combatState = original ? structuredClone(original) : { active: false, round: 1, turnIndex: 0, combatants: [] };
-    combatState.combatants.push(combatant);
+    combatState.combatants.push({ ...combatant, conditions: combatant.conditions || [] });
     combatState.combatants.sort((a: any, b: any) => b.initiative - a.initiative);
     shared.set('combatState', { ...combatState });
   }
@@ -660,6 +773,23 @@ export class CampaignStore {
     }
   }
 
+  public updateCombatantConditions(id: string, conditions: string[]) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    const shared = this.getSharedMap();
+    const combatState = shared.get('combatState');
+    if (!combatState) return;
+    const c = combatState.combatants.find((c: any) => c.id === id);
+    if (c) {
+      c.conditions = conditions;
+      shared.set('combatState', { ...combatState });
+      
+      if (c.source === 'character') {
+        const charMap = this.getCharacterMap(c.refId);
+        charMap.set('conditions', conditions);
+      }
+    }
+  }
+
   public updateCombatantHp(id: string, hp: { current: number, max: number }) {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     const shared = this.getSharedMap();
@@ -695,6 +825,7 @@ export class CampaignStore {
       for (const m of entry.monsters) {
         const template = templates.find((t: any) => t.id === m.templateId);
         if (template) {
+          const maxHp = template.hp?.max || 10;
           for (let i = 0; i < m.count; i++) {
             combatState.combatants.push({
               id: `monster-${Date.now()}-${Math.random()}`,
@@ -703,8 +834,9 @@ export class CampaignStore {
               label: `${template.name} ${i + 1}`,
               initiative: Math.floor(Math.random() * 20) + 1, // roll 1d20
               ac: template.stats?.ac || 10,
-              hp: { ...template.hp },
-              statuses: []
+              hp: { current: maxHp, max: maxHp },
+              statuses: [],
+              conditions: []
             });
           }
         }
@@ -741,15 +873,20 @@ export class CampaignStore {
     if (this.role === 'player' && shared.get('locked')) throw new Error('Sheet is locked by DM');
     
     const charMap = this.getCharacterMap(charId);
-    const inventory = charMap.get('inventory') || [];
+    const mainStorage = charMap.get('mainStorage') || [];
+    const extraPlanarStorage = charMap.get('extraPlanarStorage') || [];
     const newItem = {
       ...itemData,
-      id: `inv-${Date.now()}-${Math.random()}`,
+      id: itemData.id || `inv-${Date.now()}-${Math.random()}`,
       quantity: itemData.quantity ?? 1,
       equipped: false,
       effectsOnEquip: itemData.effectsOnEquip ?? []
     };
-    charMap.set('inventory', [...inventory, newItem]);
+    if (mainStorage.length < 15) {
+      charMap.set('mainStorage', [...mainStorage, newItem]);
+    } else {
+      charMap.set('extraPlanarStorage', [...extraPlanarStorage, newItem]);
+    }
   }
 
   public removeInventoryItem(charId: string, itemId: string) {
@@ -757,15 +894,29 @@ export class CampaignStore {
     if (this.role === 'player' && shared.get('locked')) throw new Error('Sheet is locked by DM');
     
     const charMap = this.getCharacterMap(charId);
-    const inventory: Item[] = charMap.get('inventory') || [];
-    const item = inventory.find(i => i.id === itemId);
+    const mainStorage: Item[] = charMap.get('mainStorage') || [];
+    const extraPlanarStorage: Item[] = charMap.get('extraPlanarStorage') || [];
+    const equipment = charMap.get('equipment') || {};
     
-    if (item && item.equipped && item.revertData) {
-      const mutations = computeRevertEffects(item.effectsOnEquip, { sourceId: charId, store: this }, item.revertData);
-      this.commitMutations(mutations);
+    let foundEqSlot: string | null = null;
+    let eqItem: Item | null = null;
+    for (const [slot, item] of Object.entries(equipment)) {
+       if (item && (item as Item).id === itemId) {
+           foundEqSlot = slot;
+           eqItem = item as Item;
+           break;
+       }
     }
     
-    charMap.set('inventory', inventory.filter(i => i.id !== itemId));
+    if (eqItem && eqItem.revertData) {
+       const mutations = computeRevertEffects(eqItem.effectsOnEquip, { sourceId: charId, store: this }, eqItem.revertData);
+       this.commitMutations(mutations);
+       charMap.set('equipment', { ...equipment, [foundEqSlot!]: null });
+       return;
+    }
+    
+    charMap.set('mainStorage', mainStorage.filter(i => i.id !== itemId));
+    charMap.set('extraPlanarStorage', extraPlanarStorage.filter(i => i.id !== itemId));
   }
 
   // ================= Blood Moon Global Override =================
@@ -884,6 +1035,63 @@ export class CampaignStore {
     const sharedMap = this.getSharedMap();
     const encounters = this.getActiveEncounters();
     sharedMap.set('activeEncounters', encounters.filter(e => e.id !== id));
+  }
+
+  // --- Real-Time Clock Controls ---
+  public playClock() {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    const shared = this.getSharedMap();
+    const original = shared.get('timeState') as TimeState | undefined;
+    const timeState: TimeState = original ? structuredClone(original) : { blocks: 0 };
+    
+    if (timeState.isRunning) return; // Already running
+    
+    if (timeState.gameTimeMs === undefined) {
+      const BLOCK_MS = 6 * 60 * 60 * 1000;
+      timeState.gameTimeMs = timeState.blocks * BLOCK_MS;
+    }
+
+    timeState.isRunning = true;
+    timeState.lastRealTimeMs = Date.now();
+    timeState.timeScale = timeState.timeScale ?? 60;
+    
+    shared.set('timeState', timeState);
+  }
+
+  public pauseClock() {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    const shared = this.getSharedMap();
+    const original = shared.get('timeState') as TimeState | undefined;
+    const timeState: TimeState = original ? structuredClone(original) : { blocks: 0 };
+    
+    if (!timeState.isRunning) return;
+    
+    if (timeState.lastRealTimeMs && timeState.gameTimeMs !== undefined) {
+      const elapsedReal = Date.now() - timeState.lastRealTimeMs;
+      timeState.gameTimeMs += elapsedReal * (timeState.timeScale || 60);
+    }
+    
+    timeState.isRunning = false;
+    timeState.lastRealTimeMs = Date.now();
+    
+    shared.set('timeState', timeState);
+  }
+
+  public setTimeScale(scale: number) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    const shared = this.getSharedMap();
+    const original = shared.get('timeState') as TimeState | undefined;
+    const timeState: TimeState = original ? structuredClone(original) : { blocks: 0 };
+    
+    if (timeState.isRunning && timeState.lastRealTimeMs && timeState.gameTimeMs !== undefined) {
+      const elapsedReal = Date.now() - timeState.lastRealTimeMs;
+      timeState.gameTimeMs += elapsedReal * (timeState.timeScale || 60);
+    }
+    
+    timeState.lastRealTimeMs = Date.now();
+    timeState.timeScale = scale;
+    
+    shared.set('timeState', timeState);
   }
 
   public destroy(): void {

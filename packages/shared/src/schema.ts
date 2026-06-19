@@ -11,6 +11,77 @@ export const UserSchema = z.object({
 });
 export type User = z.infer<typeof UserSchema>;
 
+export type Spell = z.infer<typeof SpellSchema>;
+
+// ====== NEW: Spells Compendium ======
+export const SpellSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  level: z.number(),
+  school: z.string(),
+  classes: z.array(z.string()),
+  castingTime: z.string().optional(),
+  range: z.string(),
+  components: z.array(z.string()),
+  duration: z.string(),
+  description: z.string(),
+  concentration: z.boolean().optional(),
+  ritual: z.boolean().optional(),
+  upgradeText: z.string().nullable().optional(),
+  isCustom: z.boolean().default(false),
+  isShared: z.boolean().default(true),
+  authorId: z.string().optional(),
+  higherLevelSlot: z.string().optional(),
+  material: z.string().nullable().optional()
+});
+
+export const MagicItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  type: z.string(),
+  rarity: z.string(),
+  requiresAttunement: z.boolean(),
+  description: z.string()
+});
+export type MagicItem = z.infer<typeof MagicItemSchema>;
+
+export const BestiaryItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  size: z.string(),
+  type: z.string(),
+  alignment: z.string(),
+  ac: z.string(),
+  hp: z.string(),
+  speed: z.string(),
+  stats: z.object({
+    str: z.string(), str_mod: z.string(),
+    dex: z.string(), dex_mod: z.string(),
+    con: z.string(), con_mod: z.string(),
+    int: z.string(), int_mod: z.string(),
+    wis: z.string(), wis_mod: z.string(),
+    cha: z.string(), cha_mod: z.string()
+  }),
+  savingThrows: z.string().optional(),
+  skills: z.string().optional(),
+  damageResistances: z.string().optional(),
+  damageVulnerabilities: z.string().optional(),
+  damageImmunities: z.string().optional(),
+  conditionImmunities: z.string().optional(),
+  senses: z.string().optional(),
+  languages: z.string().optional(),
+  cr: z.string(),
+  traits: z.string().optional(),
+  actions: z.string().optional(),
+  legendaryActions: z.string().optional(),
+  imgUrl: z.string().nullable().optional(),
+  isCustom: z.boolean().default(false),
+  isShared: z.boolean().default(true),
+  authorId: z.string().optional(),
+  isRevealed: z.boolean().default(false)
+});
+export type BestiaryItem = z.infer<typeof BestiaryItemSchema>;
+
 export const SubscriptionSchema = z.object({
   userId: z.string(),
   stripeCustomerId: z.string(),
@@ -47,6 +118,7 @@ export type Campaign = z.infer<typeof CampaignSchema>;
 // 7.3 Map Feature
 export const MapPinSchema = z.object({
   id: z.string(),
+  mapId: z.string(),
   x: z.number(),
   y: z.number(),
   color: z.string(),
@@ -60,6 +132,8 @@ export const CharacterProfileSchema = z.object({
   id: z.string(),
   name: z.string(),
   charClass: z.string(),
+  level: z.number().default(1),
+  species: z.string().optional(),
 });
 export type CharacterProfile = z.infer<typeof CharacterProfileSchema>;
 
@@ -122,7 +196,8 @@ export const ItemTemplateSchema = z.object({
   effectDescription: z.string().optional(),
   effectsOnEquip: z.array(EffectSchema).optional(),
   visibleToAll: z.boolean().default(true),
-  creatorId: z.string().optional()
+  creatorId: z.string().optional(),
+  validSlots: z.array(z.string()).optional(),
 });
 export type ItemTemplate = z.infer<typeof ItemTemplateSchema>;
 
@@ -138,20 +213,84 @@ export const ItemSchema = z.object({
   equipped: z.boolean(),
   effectsOnEquip: z.array(EffectSchema),
   revertData: z.record(z.any()).optional(),
+  validSlots: z.array(z.string()).optional(),
 });
 export type Item = z.infer<typeof ItemSchema>;
+
+export const EquipmentItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  equipmentCategory: z.string(),
+  cost: z.union([z.string(), z.record(z.any())]).optional(),
+  weight: z.union([z.number(), z.string()]).optional(),
+  description: z.string(),
+  damage: z.string().optional(),
+  properties: z.array(z.string()).optional(),
+  armorClass: z.union([z.string(), z.number()]).optional(),
+  stealthDisadvantage: z.boolean().optional(),
+  strengthRequirement: z.number().optional(),
+  isCustom: z.boolean().default(false),
+  isShared: z.boolean().default(true),
+  authorId: z.string().default("SYSTEM"),
+});
+export type EquipmentItem = z.infer<typeof EquipmentItemSchema>;
+
+export const ClassFeatureSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  className: z.string(),
+  levelRequired: z.number(),
+  description: z.string(),
+  isCustom: z.boolean().default(false),
+  isShared: z.boolean().default(true),
+  authorId: z.string().default("SYSTEM"),
+});
+export type ClassFeature = z.infer<typeof ClassFeatureSchema>;
+
+export const FeatSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  prerequisite: z.string().nullable(),
+  description: z.string(),
+  isCustom: z.boolean().default(false),
+  isShared: z.boolean().default(true),
+  authorId: z.string().default("SYSTEM"),
+});
+export type Feat = z.infer<typeof FeatSchema>;
+
+export const EquipmentSchema = z.object({
+  head: ItemSchema.nullable().optional(),
+  mask: ItemSchema.nullable().optional(),
+  torso: ItemSchema.nullable().optional(),
+  hands: ItemSchema.nullable().optional(),
+  belt: ItemSchema.nullable().optional(),
+  feet: ItemSchema.nullable().optional(),
+  ring1: ItemSchema.nullable().optional(),
+  ring2: ItemSchema.nullable().optional(),
+  amulet: ItemSchema.nullable().optional(),
+  mainHand: ItemSchema.nullable().optional(),
+  offHand: ItemSchema.nullable().optional(),
+});
+export type EquipmentMap = z.infer<typeof EquipmentSchema>;
 
 export const CharacterSchema = z.object({
   id: z.string(),
   name: z.string(),
+  charClass: z.string().optional(),
+  level: z.number().default(1),
+  species: z.string().optional(),
   ownerParticipantId: z.string(),
   locked: z.boolean(),
   hp: z.object({ current: z.number(), max: z.number() }),
   statValues: z.record(z.any()),
   currencies: z.record(z.number()),
   statuses: z.array(StatusInstanceSchema),
-  inventory: z.array(ItemSchema),
+  conditions: z.array(z.string()).default([]),
+  mainStorage: z.array(ItemSchema),
+  extraPlanarStorage: z.array(ItemSchema),
+  equipment: EquipmentSchema,
   avatarRef: z.string().optional(),
+  feats: z.array(FeatSchema).default([]),
 });
 export type Character = z.infer<typeof CharacterSchema>;
 
@@ -195,6 +334,7 @@ export const CombatantSchema = z.object({
   ac: z.number(),
   hp: z.object({ current: z.number(), max: z.number() }),
   statuses: z.array(StatusInstanceSchema),
+  conditions: z.array(z.string()).default([]),
 });
 export type Combatant = z.infer<typeof CombatantSchema>;
 
@@ -209,6 +349,10 @@ export type CombatState = z.infer<typeof CombatStateSchema>;
 // 7.7 Time
 export const TimeStateSchema = z.object({
   blocks: z.number(),
+  gameTimeMs: z.number().optional(),
+  lastRealTimeMs: z.number().optional(),
+  timeScale: z.number().optional(),
+  isRunning: z.boolean().optional(),
 });
 export type TimeState = z.infer<typeof TimeStateSchema>;
 
@@ -300,7 +444,10 @@ export type GlobalEffect = z.infer<typeof GlobalEffectSchema>;
 export const NoteSchema = z.object({
   id: z.string(),
   title: z.string(),
-  content: z.string(),
+  content: z.string().optional(),
+  body: z.string().optional(),
+  inGameDateString: z.string().optional(),
+  inGameDayNumber: z.number().optional(),
 });
 export type Note = z.infer<typeof NoteSchema>;
 

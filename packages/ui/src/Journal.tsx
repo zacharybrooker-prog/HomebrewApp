@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-export interface Note { id: string; title: string; content: string; }
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Mic } from 'lucide-react';
+const MicIcon = Mic as any;
+export interface Note { id: string; title: string; content?: string; body?: string; inGameDateString?: string; inGameDayNumber?: number; }
 export interface Handout { id: string; title: string; textContent?: string; imageBase64?: string; isRevealed: boolean; }
 
 export interface JournalProps {
@@ -22,29 +24,146 @@ export function Journal({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingHandoutId, setEditingHandoutId] = useState<string | null>(null);
 
+  // Master-Detail State
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchDate, setSearchDate] = useState('');
+
   // Form states
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [inGameDateString, setInGameDateString] = useState('');
+  const [inGameDayNumber, setInGameDayNumber] = useState<number | ''>('');
   const [imageBase64, setImageBase64] = useState<string | undefined>();
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      
+      recognition.onresult = (event: any) => {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            setContent(prev => {
+              const prevTrimmed = prev.trim();
+              const transcript = event.results[i][0].transcript.trim();
+              if (!prevTrimmed) return transcript;
+              return prevTrimmed + ' ' + transcript;
+            });
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionRef.current = recognition;
+      setHasSpeechSupport(true);
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
+  // Abort recording if we change notes or exit edit mode
+  useEffect(() => {
+    if (!editingNoteId && recognitionRef.current && isRecording) {
+      try {
+        recognitionRef.current.abort();
+        setIsRecording(false);
+      } catch (e) {}
+    }
+  }, [editingNoteId, isRecording]);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) return;
+    
+    if (isRecording) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error("Failed to stop recording:", e);
+      }
+      setIsRecording(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (e) {
+        console.error("Failed to start recording:", e);
+      }
+    }
+  };
+
+  const sortedAndFilteredNotes = useMemo(() => {
+    return notes
+      .filter(n => {
+        const keywordMatch = !searchKeyword || 
+          n.title.toLowerCase().includes(searchKeyword.toLowerCase()) || 
+          (n.body || n.content || '').toLowerCase().includes(searchKeyword.toLowerCase());
+        const dateMatch = !searchDate || 
+          (n.inGameDateString || '').toLowerCase().includes(searchDate.toLowerCase()) ||
+          (n.inGameDayNumber !== undefined && String(n.inGameDayNumber).includes(searchDate));
+        return keywordMatch && dateMatch;
+      })
+      .sort((a, b) => {
+        const dayA = a.inGameDayNumber ?? 0;
+        const dayB = b.inGameDayNumber ?? 0;
+        return dayA - dayB; // chronological
+      });
+  }, [notes, searchKeyword, searchDate]);
 
   const handleCreateNote = () => {
     setTitle('');
     setContent('');
-    setEditingNoteId(`note-${Date.now()}`);
+    setInGameDateString('');
+    setInGameDayNumber('');
+    const newId = `note-${Date.now()}`;
+    setEditingNoteId(newId);
+    setSelectedNoteId(newId);
   };
 
   const handleEditNote = (note: Note) => {
     setTitle(note.title);
-    setContent(note.content);
+    setContent(note.body || note.content || '');
+    setInGameDateString(note.inGameDateString || '');
+    setInGameDayNumber(note.inGameDayNumber ?? '');
     setEditingNoteId(note.id);
   };
 
   const handleCommitNote = () => {
     if (!editingNoteId) return;
+    
+    let finalDay: number | undefined = undefined;
+    if (inGameDayNumber !== '') {
+      const parsed = Number(inGameDayNumber);
+      if (!isNaN(parsed)) finalDay = parsed;
+    }
+
     onSaveNote({
       id: editingNoteId,
       title: title || 'Untitled Note',
-      content: content || ''
+      body: content || '',
+      content: content || '',
+      inGameDateString: inGameDateString || undefined,
+      inGameDayNumber: finalDay
     });
     setEditingNoteId(null);
   };
@@ -154,52 +273,165 @@ export function Journal({
       </div>
 
       {tab === 'notes' && (
-        <div className="flex-1 flex flex-col gap-4">
-          {!editingNoteId ? (
-            <>
-              <div className="flex justify-between items-center">
-                <h3 className="font-bold text-muted-foreground">Private Campaign Notes</h3>
-                <button className="btn-fantasy py-1 px-3 text-xs" onClick={handleCreateNote}>+ New Note</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {notes.map(note => (
-                  <div key={note.id} className="glass-panel p-4 flex flex-col cursor-pointer hover:border-accent/40 transition-colors" onClick={() => handleEditNote(note)}>
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-bold">{note.title}</h4>
-                      <button 
-                        className="text-red-500 hover:text-red-400 text-xs"
-                        onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">{note.content}</p>
-                  </div>
-                ))}
-                {notes.length === 0 && <div className="text-sm italic text-muted-foreground">No private notes yet.</div>}
-              </div>
-            </>
-          ) : (
-            <div className="glass-panel p-4 flex flex-col gap-3 flex-1">
+        <div className="flex-1 flex gap-4 overflow-hidden">
+          {/* LEFT COLUMN: Master List */}
+          <div className="w-1/3 flex flex-col gap-4 border-r border-[var(--border)] pr-4">
+            <div className="flex flex-col gap-2">
               <input 
                 type="text" 
-                className="input-fantasy text-lg font-bold" 
-                placeholder="Note Title..."
-                value={title}
-                onChange={e => setTitle(e.target.value)}
+                placeholder="Search keywords..." 
+                className="input-fantasy text-sm"
+                value={searchKeyword}
+                onChange={e => setSearchKeyword(e.target.value)}
               />
-              <textarea 
-                className="input-fantasy flex-1 resize-none font-mono text-sm leading-relaxed" 
-                placeholder="Write your secret campaign notes here..."
-                value={content}
-                onChange={e => setContent(e.target.value)}
+              <input 
+                type="text" 
+                placeholder="Search date (e.g. 15th of Flamerule)" 
+                className="input-fantasy text-sm"
+                value={searchDate}
+                onChange={e => setSearchDate(e.target.value)}
               />
-              <div className="flex justify-end gap-2 mt-2">
-                <button className="btn-ghost" onClick={() => setEditingNoteId(null)}>Cancel</button>
-                <button className="btn-fantasy" onClick={handleCommitNote}>Save Note</button>
-              </div>
+              <button className="btn-fantasy py-2 mt-2" onClick={handleCreateNote}>
+                + New Journal Entry
+              </button>
             </div>
-          )}
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-2">
+              {sortedAndFilteredNotes.map(note => {
+                const isSelected = selectedNoteId === note.id;
+                return (
+                  <div 
+                    key={note.id} 
+                    className={`p-3 border rounded cursor-pointer transition-colors ${isSelected ? 'bg-secondary/20 border-secondary' : 'glass-panel hover:bg-white/5 border-transparent'}`}
+                    onClick={() => {
+                      setSelectedNoteId(note.id);
+                      if (editingNoteId) setEditingNoteId(null);
+                    }}
+                  >
+                    <h4 className="font-bold text-accent truncate">{note.title}</h4>
+                    {(note.inGameDateString || note.inGameDayNumber !== undefined) && (
+                      <div className="text-xs text-muted-foreground italic truncate">
+                        {note.inGameDateString} {note.inGameDayNumber !== undefined && `(Day ${note.inGameDayNumber})`}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {sortedAndFilteredNotes.length === 0 && (
+                <div className="text-sm italic text-muted-foreground text-center mt-8">No notes found.</div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Detail View */}
+          <div className="w-2/3 flex flex-col bg-gray-900/50 rounded-lg border border-[var(--border)] overflow-hidden relative">
+            {editingNoteId ? (
+              // EDIT MODE
+              <div className="p-6 flex flex-col gap-4 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-bold text-accent">Editing Entry</h3>
+                </div>
+                <input 
+                  type="text" 
+                  className="input-fantasy text-xl font-bold font-serif" 
+                  placeholder="Journal Title..."
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                />
+                <div className="flex gap-4">
+                  <input 
+                    type="text" 
+                    className="input-fantasy flex-1" 
+                    placeholder="Date String (e.g. 15th of Flamerule)"
+                    value={inGameDateString}
+                    onChange={e => setInGameDateString(e.target.value)}
+                  />
+                  <input 
+                    type="number" 
+                    className="input-fantasy w-32" 
+                    placeholder="Day #"
+                    value={inGameDayNumber}
+                    onChange={e => setInGameDayNumber(e.target.value ? Number(e.target.value) : '')}
+                  />
+                </div>
+                <div className="flex flex-col flex-1 relative min-h-[200px]">
+                  <button 
+                    type="button"
+                    onClick={hasSpeechSupport ? toggleRecording : undefined}
+                    disabled={!hasSpeechSupport}
+                    className={`absolute right-4 bottom-4 p-3 rounded-full border transition-all z-10 shadow-lg ${
+                      !hasSpeechSupport 
+                        ? 'border-gray-700 text-gray-600 bg-gray-900/50 cursor-not-allowed'
+                        : isRecording 
+                          ? 'border-pink-500 text-pink-500 animate-pulse bg-gray-900' 
+                          : 'border-[var(--border)] text-muted-foreground hover:bg-white/5 bg-gray-900/50'
+                    }`}
+                    title={!hasSpeechSupport ? "Dictation not supported in this browser" : isRecording ? "Stop dictating" : "Start dictating"}
+                  >
+                    <MicIcon size={20} />
+                  </button>
+                  <textarea 
+                    className="input-fantasy flex-1 resize-none font-serif text-base leading-relaxed p-4 pb-16" 
+                    placeholder="Write your lore or campaign notes here..."
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-2">
+                  <button className="btn-ghost" onClick={() => setEditingNoteId(null)}>Cancel</button>
+                  <button className="btn-fantasy" onClick={handleCommitNote}>Save Entry</button>
+                </div>
+              </div>
+            ) : selectedNoteId ? (
+              // READ MODE
+              (() => {
+                const note = notes.find(n => n.id === selectedNoteId);
+                if (!note) {
+                  return (
+                    <div className="flex-1 flex items-center justify-center text-muted-foreground italic">
+                      Entry not found or was deleted remotely.
+                    </div>
+                  );
+                }
+                return (
+                  <div className="p-8 flex flex-col flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="flex justify-between items-start mb-6 border-b border-[var(--border)] pb-4">
+                      <div>
+                        <h2 className="text-3xl font-bold text-accent font-serif mb-1">{note.title}</h2>
+                        {(note.inGameDateString || note.inGameDayNumber !== undefined) && (
+                          <div className="text-sm text-muted-foreground italic">
+                            {note.inGameDateString} {note.inGameDayNumber !== undefined && `(Day ${note.inGameDayNumber})`}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="btn-ghost text-xs" onClick={() => handleEditNote(note)}>Edit</button>
+                        <button 
+                          className="btn-ghost text-xs text-red-500 hover:text-red-400"
+                          onClick={() => {
+                            if (confirm('Delete this entry?')) {
+                              onDeleteNote(note.id);
+                              setSelectedNoteId(null);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div className="font-serif text-lg leading-relaxed whitespace-pre-wrap text-gray-200">
+                      {note.body || note.content}
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              // EMPTY STATE
+              <div className="flex-1 flex items-center justify-center text-muted-foreground italic">
+                Select a journal entry from the list to read.
+              </div>
+            )}
+          </div>
         </div>
       )}
 

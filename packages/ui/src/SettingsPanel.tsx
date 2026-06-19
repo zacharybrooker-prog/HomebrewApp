@@ -11,11 +11,12 @@ interface SettingsPanelProps {
   currencies: CurrencyDef[];
   onAddCurrency: (def: CurrencyDef) => void;
   onRemoveCurrency: (id: string) => void;
+  databaseControls?: any;
   onClose: () => void;
 }
 
-export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, onClose }: SettingsPanelProps) {
-  const [tab, setTab] = useState<'currencies' | 'schema'>('currencies');
+export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, databaseControls, onClose }: SettingsPanelProps) {
+  const [tab, setTab] = useState<'currencies' | 'schema' | 'database'>('currencies');
   const [newCurrencyName, setNewCurrencyName] = useState('');
   const [newCurrencyAbbr, setNewCurrencyAbbr] = useState('');
 
@@ -54,6 +55,12 @@ export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, onC
             onClick={() => setTab('schema')}
           >
             Stat Schema
+          </button>
+          <button 
+            className={`tab-pill ${tab === 'database' ? 'tab-pill-active' : ''}`}
+            onClick={() => setTab('database')}
+          >
+            Database
           </button>
         </div>
 
@@ -102,6 +109,18 @@ export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, onC
           {tab === 'schema' && (
             <div className="text-center py-8 text-muted-foreground italic text-sm">
               Stat Schema editing is currently handled in the main view.
+            </div>
+          )}
+          
+          {tab === 'database' && (
+            <div className="flex flex-col gap-4">
+               <div className="text-sm text-muted-foreground mb-4">
+                 Manage bulk database operations.
+               </div>
+               
+               {/* Manual seeding buttons removed in favor of auto-seeding pipeline */}
+               
+               {databaseControls}
             </div>
           )}
         </div>

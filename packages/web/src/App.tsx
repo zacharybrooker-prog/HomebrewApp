@@ -1,27 +1,71 @@
 import { useEffect, useState, useRef } from 'react';
-import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate, calculateMoonPhases } from '@frogs-world/shared';
-import type { StatFieldDef, Item, StatusInstance, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect } from '@frogs-world/shared/src/schema';
-import { HPGauge, StatField, CurrencyRow, ItemRow, SchemaEditor, StatusList, ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal } from '@frogs-world/ui';
+import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate, CONDITIONS_DATA } from '@frogs-world/shared';
+import type { StatFieldDef, Item, StatusInstance, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
+import { HPGauge, StatField, CurrencyRow, SchemaEditor, StatusList, ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, ConditionPopover } from '@frogs-world/ui';
 
 import { CombatTracker } from './components/CombatTracker';
-import { MonsterLibrary } from './components/MonsterLibrary';
+import { SpellsCompendium } from './components/SpellsCompendium';
+import { BestiaryCompendium } from './components/BestiaryCompendium';
 import { EventEditor } from './components/EventEditor';
 import { MapTab } from './components/MapTab';
+import { MagicItemsCompendium } from './components/MagicItemsCompendium';
+import { EquipmentCompendium } from './components/EquipmentCompendium';
+import { FeatsCompendium } from './components/FeatsCompendium';
+import { FeaturesTraitsTab } from './components/FeaturesTraitsTab';
+import { CsvImporter } from './components/CsvImporter';
 
 import { Landing } from '@frogs-world/ui';
 
 export function GameApp({ store, initialRole, campaignId }: { store: CampaignStore, initialRole: 'dm' | 'player', campaignId: string }) {
   const [role, setRole] = useState<'dm' | 'player' | null>(initialRole);
-  const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'monsters' | 'events' | 'calendar' | 'journal' | 'settings' | 'map'>('sheet');
+  const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'bestiary' | 'events' | 'calendar' | 'journal' | 'settings' | 'map' | 'inventory' | 'mount' | 'abilities' | 'botany' | 'spells' | 'items' | 'equipment' | 'curses' | 'diseases' | 'recipes' | 'glossary' | 'feats'>('sheet');
+  const [sheetTab, setSheetTab] = useState<'inventory' | 'features'>('inventory');
+  const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [lanTarget, setLanTarget] = useState(`ws://localhost:3000/ws/campaign`);
   
   const [schema, setSchema] = useState<StatFieldDef[]>([]);
   const [locked, setLocked] = useState(false);
-  const [timeState, setTimeState] = useState({ blocks: 0 });
+  const [activePopover, setActivePopover] = useState<{ condition: string } | null>(null);
+  const [conditions, setConditions] = useState<string[]>([]);
+  const [timeState, setTimeState] = useState<TimeState>({ blocks: 0 });
   const [showItemManager, setShowItemManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [feed, setFeed] = useState<{id: string, message: string}[]>([]);
+
+  // Inventory UI State
+  const [showExtraPlanar, setShowExtraPlanar] = useState(false);
+  const [equipMenuTarget, setEquipMenuTarget] = useState<Item | null>(null);
+
+  const PaperDollSlot = ({ item, label, top, left, right, tx, onUnequip }: any) => {
+    return (
+      <div 
+        className="absolute w-16 h-16 flex flex-col items-center justify-center border border-[var(--border)] rounded bg-black/40 backdrop-blur transition-all duration-300 hover:border-[var(--accent)] cursor-pointer group"
+        style={{ 
+          top, 
+          left, 
+          right, 
+          transform: `translateX(${tx})`,
+          boxShadow: item ? '0 0 15px rgba(225,29,72,0.15)' : 'none'
+        }}
+        onClick={() => item && onUnequip()}
+      >
+        <span className="text-[9px] font-heading uppercase text-muted-foreground absolute -top-4">{label}</span>
+        {item ? (
+          <div className="text-center p-1">
+            <span className="text-xs font-bold text-accent leading-tight line-clamp-2" style={{ textShadow: '0 0 5px rgba(0,0,0,1)' }}>{item.name}</span>
+          </div>
+        ) : (
+          <span className="text-white/10 text-xl opacity-30">+</span>
+        )}
+        {item && (
+          <div className="absolute inset-0 bg-danger/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
+            <span className="text-xs font-bold text-white">Unequip</span>
+          </div>
+        )}
+      </div>
+    );
+  };
   const [combatState, setCombatState] = useState<CombatState>({ active: false, round: 1, turnIndex: 0, combatants: [] });
   const [monsterTemplates, setMonsterTemplates] = useState<MonsterTemplate[]>([]);
   const [eventTables, setEventTables] = useState<EventTable[]>([]);
@@ -36,8 +80,11 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   const [hp, setHp] = useState({ current: 10, max: 10 });
   const [baseStats, setBaseStats] = useState<Record<string, any>>({});
   const [currencies, setCurrencies] = useState<Record<string, number>>({});
-  const [inventory, setInventory] = useState<Item[]>([]);
+  const [mainStorage, setMainStorage] = useState<Item[]>([]);
+  const [extraPlanarStorage, setExtraPlanarStorage] = useState<Item[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentMap>({} as EquipmentMap);
   const [statuses, setStatuses] = useState<StatusInstance[]>([]);
+  const [activeCharacter, setActiveCharacter] = useState<any>(null);
   
   const [notes, setNotes] = useState<Note[]>([]);
   const [handouts, setHandouts] = useState<Handout[]>([]);
@@ -50,6 +97,21 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   useEffect(() => {
     store.setRole(role || 'player');
   }, [role, store]);
+
+  // Silently trigger auto-seed pipeline on startup
+  useEffect(() => {
+    // Only run if we are in production or if configured to run
+    fetch('/api/init-database', { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.didSeed) {
+          console.log('[Auto-Seed] Database was successfully seeded.');
+        } else {
+          console.log('[Auto-Seed] Database already seeded or initialization failed.', data);
+        }
+      })
+      .catch(err => console.error('[Auto-Seed] Error triggering init-database:', err));
+  }, []);
 
   useEffect(() => {
     const isLobby = role === null || (role === 'player' && !activeCharId);
@@ -106,6 +168,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
       
       setActiveEncounters([...store.getActiveEncounters()]);
       setBloodMoon(sharedMap.get('bloodMoon') || false);
+      setLocationName(sharedMap.get('locationName') || 'Unknown Location');
     };
     
     const updateDmState = () => {
@@ -141,6 +204,50 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     };
   }, [store]);
 
+  const [locationName, setLocationName] = useState('Unknown Location');
+  const [visualTimeMs, setVisualTimeMs] = useState(0);
+
+  const formatClockTime = (ms: number) => {
+    const msInDay = Math.floor(ms % (24 * 60 * 60 * 1000));
+    const totalMinutes = Math.floor(msInDay / 60000);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+
+  // Real-time Visual Clock rendering loop
+  useEffect(() => {
+    let animationFrame: number;
+    const tick = () => {
+      if (timeState.gameTimeMs !== undefined) {
+        if (timeState.isRunning && timeState.lastRealTimeMs) {
+          const elapsedReal = Date.now() - timeState.lastRealTimeMs;
+          const scale = timeState.timeScale || 60;
+          setVisualTimeMs(timeState.gameTimeMs + elapsedReal * scale);
+        } else {
+          setVisualTimeMs(timeState.gameTimeMs);
+        }
+      } else {
+        const BLOCK_MS = 6 * 60 * 60 * 1000;
+        setVisualTimeMs(timeState.blocks * BLOCK_MS);
+      }
+      animationFrame = requestAnimationFrame(tick);
+    };
+    animationFrame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [timeState]);
+
+  // DM Auto-Progression Natural Tick Loop
+  useEffect(() => {
+    if (role !== 'dm') return;
+    const BLOCK_MS = 6 * 60 * 60 * 1000;
+    const currentBlockFloat = visualTimeMs / BLOCK_MS;
+    
+    if (Math.floor(currentBlockFloat) > timeState.blocks) {
+      store.syncNaturalTime(visualTimeMs);
+    }
+  }, [visualTimeMs, role, timeState.blocks, store]);
+
   useEffect(() => {
     if (!activeCharId) return;
     const charMap = store.getCharacterMap(activeCharId);
@@ -149,8 +256,22 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
       setHp({ ...(charMap.get('hp') || { current: 10, max: 10 }) });
       setBaseStats({ ...(charMap.get('stats') || {}) });
       setCurrencies({ ...(charMap.get('currencies') || {}) });
-      setInventory([...(charMap.get('inventory') || [])]);
+      setMainStorage([...(charMap.get('mainStorage') || [])]);
+      setExtraPlanarStorage([...(charMap.get('extraPlanarStorage') || [])]);
+      setEquipment({ ...(charMap.get('equipment') || {}) } as EquipmentMap);
       setStatuses([...(charMap.get('statuses') || [])]);
+      setConditions([...(charMap.get('conditions') || [])]);
+      
+      const p = (store.getCharacterProfiles() as any).find((c:any) => c.id === activeCharId) || {};
+      setActiveCharacter({
+        id: activeCharId,
+        name: charMap.get('name') || p.name || 'Unknown',
+        charClass: charMap.get('charClass') || p.charClass || '',
+        level: charMap.get('level') || 1,
+        species: charMap.get('species') || '',
+        feats: charMap.get('feats') || [],
+        hp: charMap.get('hp') || { current: 10, max: 10 }
+      });
     };
     
     charMap.observe(updateCharState);
@@ -173,10 +294,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     if (!activeCharId) return;
     try { store.updateCharacterHp(activeCharId, hp.current, val); } catch (e: any) { window.alert(e.message); }
   };
-  const handleToggleEquip = (itemId: string) => {
-    if (!activeCharId) return;
-    try { store.toggleItemEquip(activeCharId, itemId); } catch (e: any) { window.alert(e.message); }
-  };
+
   const handleToggleLock = () => {
     try { store.toggleLock(); } catch (e: any) { window.alert(e.message); }
   };
@@ -280,7 +398,9 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     setSyncStatus('disconnected');
   };
 
-  const activePhase = PHASES[timeState.blocks % 4]?.name || 'Unknown';
+  const BLOCK_MS = 6 * 60 * 60 * 1000;
+  const currentVisualBlock = Math.floor(visualTimeMs / BLOCK_MS);
+  const activePhase = PHASES[currentVisualBlock % 4]?.name || 'Unknown';
 
   const TAB_ICONS: Record<string, string> = {
     sheet: '📜',
@@ -290,12 +410,25 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     calendar: '📆',
     journal: '📖',
     settings: '⚙️',
-    map: '🗺️'
+    map: '🗺️',
+    inventory: '🎒',
+    mount: '🐎',
+    abilities: '✨',
+    glossary: '📚',
+    bestiary: '🐉',
+    botany: '🌿',
+    spells: '🔮',
+    items: '💍',
+    equipment: '🗡️',
+    curses: '🩸',
+    diseases: '🦠',
+    recipes: '🧪',
+    feats: '⭐'
   };
 
   if (role === null || (role === 'player' && !activeCharId)) {
     return (
-      <ThemeProvider phaseIndex={timeState.blocks % 4}>
+      <ThemeProvider phaseIndex={currentVisualBlock % 4}>
         <div className="w-full min-h-screen flex flex-col items-center p-4">
           <Lobby 
             characters={characterProfiles}
@@ -315,8 +448,89 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   }
 
   return (
-    <ThemeProvider phaseIndex={timeState.blocks % 4}>
-      <div className="w-full min-h-screen flex flex-col items-center pb-16 pt-8 px-4">
+    <ThemeProvider phaseIndex={currentVisualBlock % 4}>
+      <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-lg" style={{ height: '80px', backdropFilter: 'blur(12px)', background: 'rgba(10, 10, 15, 0.90)', borderBottom: '1px solid var(--border-accent)' }}>
+        {/* Left Zone: Location, Time & Title */}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex items-center gap-3 shrink-0">
+            {role === 'dm' ? (
+              <input 
+                className="bg-transparent text-white border-b border-white/20 focus:outline-none focus:border-accent text-sm w-32"
+                value={locationName}
+                onChange={e => {
+                  setLocationName(e.target.value);
+                  store.setLocationName(e.target.value);
+                }}
+                placeholder="Location..."
+              />
+            ) : (
+              <span className="text-white text-sm font-semibold">{locationName}</span>
+            )}
+            <span className="text-white/50">|</span>
+            <span className="font-mono text-accent font-bold tracking-widest text-sm">{formatClockTime(visualTimeMs)}</span>
+            
+            {/* DM Time Controls */}
+            {role === 'dm' && (
+              <div className="flex items-center gap-1 ml-2">
+                <button onClick={() => timeState.isRunning ? store.pauseClock() : store.playClock()} className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs">
+                  {timeState.isRunning ? '⏸' : '▶'}
+                </button>
+                <select 
+                  className="bg-black/50 border border-white/20 rounded text-xs text-white p-1 outline-none"
+                  value={timeState.timeScale || 60}
+                  onChange={e => store.setTimeScale(Number(e.target.value))}
+                >
+                  <option value="1">1:1 Real</option>
+                  <option value="60">1m=1h</option>
+                  <option value="3600">1s=1h</option>
+                </select>
+              </div>
+            )}
+          </div>
+          {/* Dynamic Campaign Name */}
+          {campaignId && (
+            <div className="hidden md:block truncate ml-4">
+              <span style={{ fontFamily: 'var(--font-decorative)', fontSize: '1.25rem', fontWeight: 900, letterSpacing: '0.08em', color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)' }}>
+                {campaignId}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Center Zone: Phase Emblem Only */}
+        <div className="flex justify-center items-center flex-none">
+          <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+             <div style={{ transform: 'scale(0.4)', transformOrigin: 'center' }}>
+               <TimeDial phaseIndex={currentVisualBlock % 4} />
+             </div>
+          </div>
+        </div>
+
+        {/* Right Zone: Time Skips & Date */}
+        <div className="flex items-center justify-end gap-4 flex-1 min-w-0">
+          {role === 'dm' && (
+            <div className="hidden md:flex bg-black/50 border border-white/20 rounded divide-x divide-white/20 text-[10px] uppercase font-bold tracking-wider shrink-0">
+              <button onClick={() => handleAdvanceTime(1)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-gold">+6h</button>
+              <button onClick={() => handleAdvanceTime(2)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70">+12h</button>
+              <button onClick={() => handleAdvanceTime(4)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70">+24h</button>
+              <button onClick={() => {
+                  const daysInWeek = calendarConfig ? calendarConfig.weekdays.length : 7;
+                  handleAdvanceTime(4 * daysInWeek);
+                }} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-secondary">+1w</button>
+            </div>
+          )}
+          <div className="flex flex-col items-end leading-none justify-center shrink-0">
+            <span style={{ fontFamily: 'var(--font-decorative)', fontSize: '0.85rem', color: 'var(--accent)', textShadow: '0 0 8px var(--accent-glow)' }}>
+              {activePhase}
+            </span>
+            <span className="text-[10px] text-white/70 mt-0.5">
+              {formatCalendarDate(currentVisualBlock, calendarConfig || undefined)}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div className="w-full min-h-screen flex flex-col items-center pb-16 pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
           <div className="fixed top-4 right-4 flex flex-col gap-2 z-50" style={{ maxWidth: '280px' }}>
@@ -336,37 +550,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             </div>
           )}
 
-          <div className="text-center">
-            <h1 style={{ fontFamily: 'var(--font-decorative)', fontSize: '1.75rem', fontWeight: 900, letterSpacing: '0.08em', color: 'var(--secondary)', textShadow: '0 0 20px var(--secondary-glow)', margin: 0 }}>
-              Homebrew Companion
-            </h1>
-            <p className="mt-1" style={{ fontFamily: 'var(--font-heading)', fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Companion App
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center gap-2">
-            <TimeDial phaseIndex={timeState.blocks % 4} />
-            {(timeState.blocks % 4 === 0 || timeState.blocks % 4 === 3) && calendarConfig?.moons && (
-              <div className="flex gap-2 animate-fade-in-up">
-                {calculateMoonPhases(Math.floor(timeState.blocks / 4), calendarConfig.moons).map(moon => (
-                  <div 
-                    key={moon.config.id} 
-                    className="text-xs font-bold px-2 py-1 rounded-full border shadow-sm flex items-center gap-1"
-                    style={{ 
-                      borderColor: moon.config.color || '#fff', 
-                      color: moon.config.color || '#fff',
-                      boxShadow: `0 0 8px ${moon.config.color || '#ffffff'}40`,
-                      background: 'rgba(0,0,0,0.4)'
-                    }}
-                    title={moon.config.name}
-                  >
-                    🌑 {moon.phaseName}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Old Title and TimeDial removed in favor of sticky header */}
 
           {activeGlobalEffect && (
             <div className="w-full max-w-2xl mb-4 relative animate-fade-in-up">
@@ -408,20 +592,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
 
           <div className="w-full max-w-2xl mb-6"></div>
 
-          <div className="glass-panel flex justify-between items-center">
-            <div>
-              <div className="sub-label">Current Phase</div>
-              <div style={{ fontFamily: 'var(--font-decorative)', fontSize: '1.15rem', fontWeight: 700, color: 'var(--accent)', textShadow: '0 0 15px var(--accent-glow)', letterSpacing: '0.04em' }}>
-                {activePhase}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="sub-label">World Time</div>
-              <div className="font-body text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                {calendarConfig ? formatCalendarDate(timeState.blocks, calendarConfig) : `Day ${Math.floor(timeState.blocks / 4) + 1}`}
-              </div>
-            </div>
-          </div>
+          {/* Old Phase and World Time removed in favor of sticky header */}
 
           <div className="glass-panel flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -501,24 +672,31 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             )}
           </div>
 
-          <div className="glass-panel flex flex-wrap gap-1.5" style={{ padding: '0.5rem' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-3">
             {(role === 'dm' 
-              ? ['sheet', 'combat', 'monsters', 'events', 'calendar', 'journal', 'map', 'settings']
-              : ['sheet', 'combat', 'calendar', 'journal', 'map', 'settings']
+              ? ['sheet', 'combat', 'events', 'calendar', 'journal', 'map', 'inventory', 'mount', 'abilities', 'glossary', 'settings']
+              : ['sheet', 'combat', 'calendar', 'journal', 'map', 'inventory', 'mount', 'abilities', 'glossary', 'settings']
             ).map(tab => (
               <button 
                 key={tab}
-                onClick={() => setActiveTab(tab as any)}
-                className={`tab-pill ${activeTab === tab ? 'tab-pill-active' : ''}`}
+                onClick={() => {
+                  if (tab === 'glossary') {
+                    setIsGlossaryOpen(true);
+                  } else {
+                    setActiveTab(tab as any);
+                  }
+                }}
+                className={`master-grid-btn ${activeTab === tab && tab !== 'glossary' ? 'active' : ''}`}
               >
-                {TAB_ICONS[tab]} {tab}
+                <div className="icon">{TAB_ICONS[tab] || '⭐'}</div>
+                <div className="text-[10px] uppercase tracking-widest font-bold mt-1">{tab}</div>
               </button>
             ))}
           </div>
 
           {activeTab === 'map' && (
             <div className="w-full animate-fade-in-up">
-              <MapTab store={store} role={role as 'dm' | 'player'} />
+              <MapTab store={store} role={role as 'dm' | 'player'} campaignId={campaignId} />
             </div>
           )}
 
@@ -539,23 +717,6 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                 <button onClick={handleToggleLock} className="btn-danger flex-1">
                   {locked ? '🔒 Unlock' : '🔓 Lock'}
                 </button>
-                <button onClick={() => handleAdvanceTime(1)} className="btn-gold flex-1">
-                  ⏳ +6 Hours
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleAdvanceTime(2)} className="btn-ghost flex-1 text-xs py-1">
-                  +12 Hours
-                </button>
-                <button onClick={() => handleAdvanceTime(4)} className="btn-ghost flex-1 text-xs py-1">
-                  +24 Hours
-                </button>
-                <button onClick={() => {
-                  const daysInWeek = calendarConfig ? calendarConfig.weekdays.length : 7;
-                  handleAdvanceTime(4 * daysInWeek);
-                }} className="btn-ghost flex-1 text-xs py-1 border-secondary/30 text-secondary hover:bg-secondary/10">
-                  +1 Week
-                </button>
               </div>
               
               <div className="flex gap-3">
@@ -571,17 +732,51 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             </div>
           )}
 
-          {(role === 'player' || activeTab === 'sheet') && (
+          {activeTab === 'sheet' && (
             <div className="glass-panel flex flex-col gap-5 animate-fade-in-up">
               
               <div className="section-heading">
                 <h2 style={{ margin: 0 }}>
-                  {(Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId)?.name || 'Adventurer'}
+                  {activeCharacter?.name || (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId)?.name || 'Adventurer'}
                 </h2>
                 <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
-                  {(Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId)?.charClass || 'Unknown Class'}
+                  {activeCharacter?.className || activeCharacter?.charClass || (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId)?.charClass || 'Unknown Class'}
                 </div>
               </div>
+
+              {/* Character Sheet Conditions Banner */}
+              {conditions.length > 0 && (
+                <div className="border border-red-500/50 bg-red-950/30 rounded-lg p-3 relative shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                  <div className="text-[10px] uppercase tracking-widest font-bold text-red-500 mb-2 flex items-center gap-2">
+                    <span>⚠️ Active Conditions</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {conditions.map((cond: string) => (
+                      <div key={cond} className="relative">
+                        <button
+                          onClick={() => setActivePopover({ condition: cond })}
+                          className="text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full border shadow-sm transition-colors"
+                          style={{
+                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                            color: '#eab308',
+                            borderColor: 'rgba(234, 179, 8, 0.4)'
+                          }}
+                        >
+                          {cond}
+                        </button>
+                        {activePopover?.condition === cond && (
+                          <ConditionPopover 
+                            condition={cond} 
+                            rulesText={CONDITIONS_DATA[cond] || 'No rules available.'}
+                            onClose={() => setActivePopover(null)} 
+                            // No onRemove prop, players cannot clear their own statuses
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             
               <StatusList statuses={statuses} />
             
@@ -594,8 +789,8 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
               {(() => {
                 const getStatBonus = (statId: string) => {
                   let bonus = 0;
-                  for (const item of (Array.isArray(inventory) ? inventory : [])) {
-                    if (item.equipped && Array.isArray(item.effectsOnEquip)) {
+                  for (const item of Object.values(equipment)) {
+                    if (item && Array.isArray(item.effectsOnEquip)) {
                       for (const eff of item.effectsOnEquip) {
                         if (eff.type === 'modify_stat' && eff.payload && eff.payload.statId === statId) {
                           bonus += eff.payload.modifier || eff.payload.amount || 0;
@@ -657,43 +852,65 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             );
           })()}
 
-              <hr className="divider-fantasy" />
-              
-              <div>
-                <div className="sub-label">💰 Treasury</div>
-                {store.getCurrencyDefs().map(def => {
-                  const amount = currencies[def.id] || 0;
-                  return (
-                    <CurrencyRow 
-                      key={def.id} 
-                      label={def.name || def.id} 
-                      amount={amount} 
-                    />
-                  );
-                })}
+              <div className="flex gap-2 mt-4 border-b border-[var(--border)] pb-2">
+                <button 
+                  className={`btn-ghost ${sheetTab === 'inventory' ? 'border-b-2 border-accent text-accent' : ''}`}
+                  onClick={() => setSheetTab('inventory')}
+                >
+                  🎒 Inventory & Treasury
+                </button>
+                <button 
+                  className={`btn-ghost ${sheetTab === 'features' ? 'border-b-2 border-accent text-accent' : ''}`}
+                  onClick={() => setSheetTab('features')}
+                >
+                  ⭐ Features & Traits
+                </button>
               </div>
 
-              <hr className="divider-fantasy" />
+              {sheetTab === 'inventory' && (
+                <div className="animate-fade-in flex flex-col gap-5 pt-4">
+                  <div>
+                    <div className="sub-label">💰 Treasury</div>
+                    {store.getCurrencyDefs().map(def => {
+                      const amount = currencies[def.id] || 0;
+                      return (
+                        <CurrencyRow 
+                          key={def.id} 
+                          label={def.name || def.id} 
+                          amount={amount} 
+                        />
+                      );
+                    })}
+                  </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="sub-label mb-0">🎒 Inventory</div>
-                  <button 
-                    onClick={() => setShowItemManager(true)}
-                    className="text-xs font-bold font-heading uppercase text-accent border border-accent/30 px-2 py-1 rounded hover:bg-accent/10 transition-colors"
-                  >
-                    + Add Item
-                  </button>
+                  <hr className="divider-fantasy" />
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="sub-label mb-0">🎒 Inventory</div>
+                      <button 
+                        onClick={() => setShowItemManager(true)}
+                        className="text-xs font-bold font-heading uppercase text-accent border border-accent/30 px-2 py-1 rounded hover:bg-accent/10 transition-colors"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+                    
+                    <button 
+                      onClick={() => setActiveTab('inventory')}
+                      className="btn-ghost py-4 flex flex-col items-center gap-2 border border-[var(--border-accent)]"
+                      style={{ background: 'rgba(0,0,0,0.3)' }}
+                    >
+                      <span className="text-xl">🎒</span>
+                      <span className="font-heading uppercase tracking-widest text-accent text-sm">Open Bag of Holding</span>
+                    </button>
+                  </div>
                 </div>
-                {(Array.isArray(inventory) ? inventory : []).map(item => (
-                  <ItemRow 
-                    key={item.id} 
-                    item={item}
-                    onToggleEquip={() => handleToggleEquip(item.id)}
-                    onRemove={() => store.removeInventoryItem(activeCharId!, item.id)}
-                  />
-                ))}
-              </div>
+              )}
+
+              {sheetTab === 'features' && activeCharacter && (
+                <FeaturesTraitsTab character={activeCharacter as any} store={store} />
+              )}
             </div>
           )}
 
@@ -701,6 +918,12 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
           <CombatTracker 
             role={role || 'player'}
             combatState={combatState} 
+            monsterTemplates={monsterTemplates}
+            onAddCombatant={(c) => store.addCombatant(c)}
+            onImport={(templates) => {
+              const dmMap = store.getDmMap();
+              dmMap.set('monsterTemplates', templates);
+            }}
             onStart={() => store.startCombat()} 
             onEnd={() => store.endCombat()} 
             onNextTurn={() => store.nextTurn()} 
@@ -708,32 +931,12 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             onUpdateInitiative={(id, val) => store.updateCombatantInitiative(id, val)} 
             onUpdateAc={(id, val) => store.updateCombatantAc(id, val)}
             onUpdateHp={(id, curr, max) => store.updateCombatantHp(id, { current: curr, max })}
+            onUpdateConditions={(id, conds) => store.updateCombatantConditions(id, conds)}
           />
         )}
 
-        {activeTab === 'monsters' && (
-          <MonsterLibrary 
-            templates={monsterTemplates}
-            onAdd={(t) => {
-              const dmMap = store.getDmMap();
-              dmMap.set('monsterTemplates', [...monsterTemplates, t]);
-            }}
-            onSendToCombat={(t) => {
-              store.addCombatant({
-                id: `monster-${Date.now()}`,
-                source: 'monster',
-                refId: t.id,
-                label: t.name,
-                initiative: 10,
-                hp: { ...t.hp },
-                statuses: []
-              });
-            }}
-            onImport={(templates) => {
-              const dmMap = store.getDmMap();
-              dmMap.set('monsterTemplates', templates);
-            }}
-          />
+        {activeTab === 'bestiary' && (
+          <BestiaryCompendium role={role} store={store} />
         )}
 
         {role === 'dm' && activeTab === 'events' && (
@@ -764,7 +967,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         {activeTab === 'calendar' && calendarConfig && (
           <div className="flex flex-col gap-6">
             {(() => {
-              const date = calculateDate(timeState.blocks, calendarConfig);
+              const date = calculateDate(currentVisualBlock, calendarConfig);
               const currentMonth = calendarConfig.months[date.monthIndex];
               if (!currentMonth) return <div>Invalid Config</div>;
               const totalDaysPassedAtMonthStart = date.totalDaysPassed - (date.dayOfMonth - 1);
@@ -961,11 +1164,212 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
               currencies={store.getCurrencyDefs()}
               onAddCurrency={(def) => store.addCurrencyDef(def)}
               onRemoveCurrency={(id) => store.removeCurrencyDef(id)}
+              databaseControls={<CsvImporter />}
               onClose={() => setShowSettings(false)}
             />
           )}
 
+        {/* --- INVENTORY (BAG OF HOLDING) --- */}
+        {activeTab === 'inventory' && (
+          <div className="animate-fade-in-up flex flex-col gap-6">
+            
+            {/* PAPER DOLL SECTION */}
+            <div className="glass-panel p-6 relative flex justify-center items-center overflow-hidden" style={{ minHeight: '600px', borderColor: 'var(--border-accent)' }}>
+              {/* Silhouette Background */}
+              <div 
+                className="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-contain pointer-events-none" 
+                style={{ backgroundImage: `url('/paper_doll_silhouette_1781326152255.png')`, mixBlendMode: 'screen' }}
+              />
+              
+              <h2 className="absolute top-6 left-6 font-heading text-2xl text-accent tracking-widest" style={{ textShadow: '0 0 10px var(--accent-glow)' }}>Equipment</h2>
+              
+              <div className="relative w-full max-w-[400px] h-[550px]">
+                <PaperDollSlot item={equipment.head} label="Head" top="5%" left="50%" tx="-50%" onUnequip={() => store.unequipItem(activeCharId!, 'head')} />
+                <PaperDollSlot item={equipment.mask} label="Mask" top="18%" left="50%" tx="-50%" onUnequip={() => store.unequipItem(activeCharId!, 'mask')} />
+                <PaperDollSlot item={equipment.amulet} label="Amulet" top="28%" left="50%" tx="-50%" onUnequip={() => store.unequipItem(activeCharId!, 'amulet')} />
+                <PaperDollSlot item={equipment.torso} label="Torso" top="42%" left="50%" tx="-50%" onUnequip={() => store.unequipItem(activeCharId!, 'torso')} />
+                <PaperDollSlot item={equipment.belt} label="Belt" top="60%" left="50%" tx="-50%" onUnequip={() => store.unequipItem(activeCharId!, 'belt')} />
+                <PaperDollSlot item={equipment.feet} label="Feet" top="85%" left="50%" tx="-50%" onUnequip={() => store.unequipItem(activeCharId!, 'feet')} />
+                
+                <PaperDollSlot item={equipment.mainHand} label="Main Hand" top="42%" left="5%" tx="0" onUnequip={() => store.unequipItem(activeCharId!, 'mainHand')} />
+                <PaperDollSlot item={equipment.hands} label="Hands" top="58%" left="10%" tx="0" onUnequip={() => store.unequipItem(activeCharId!, 'hands')} />
+                <PaperDollSlot item={equipment.ring1} label="Ring 1" top="75%" left="15%" tx="0" onUnequip={() => store.unequipItem(activeCharId!, 'ring1')} />
+                
+                <PaperDollSlot item={equipment.offHand} label="Off-Hand" top="42%" right="5%" tx="0" onUnequip={() => store.unequipItem(activeCharId!, 'offHand')} />
+                <PaperDollSlot item={equipment.ring2} label="Ring 2" top="75%" right="15%" tx="0" onUnequip={() => store.unequipItem(activeCharId!, 'ring2')} />
+              </div>
+            </div>
+
+            {/* MAIN STORAGE SECTION */}
+            <div className="glass-panel p-6 flex flex-col gap-4">
+              <div className="flex justify-between items-center border-b border-[var(--border)] pb-4">
+                <div>
+                  <h2 className="font-heading text-lg text-secondary">Bag of Holding</h2>
+                  <span className="text-xs text-muted-foreground">{mainStorage.length} / 15 Capacity</span>
+                </div>
+                <button onClick={() => setShowExtraPlanar(true)} className="btn-fantasy text-sm py-1.5 px-4 shadow-[0_0_15px_var(--secondary-glow)]">
+                  🌌 ExtraPlanar Storage
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {mainStorage.map(item => (
+                  <div key={item.id} className="bg-black/30 border border-[var(--border)] p-3 rounded-lg flex justify-between items-center hover:border-accent transition-colors">
+                    <div>
+                      <div className="font-bold text-sm text-white/90">{item.name}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest">{item.type}</div>
+                    </div>
+                    <button 
+                      onClick={() => setEquipMenuTarget(item)} 
+                      className="text-xs btn-ghost py-1 px-3 border border-[var(--border)]"
+                    >
+                      Equip
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Click-to-Equip Context Menu Modal */}
+        {equipMenuTarget && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEquipMenuTarget(null)}>
+            <div className="glass-panel w-[300px] flex flex-col p-4 animate-fade-in-up" onClick={e => e.stopPropagation()}>
+              <h3 className="font-bold text-accent mb-4 border-b border-[var(--border)] pb-2 text-center">{equipMenuTarget.name}</h3>
+              <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                {['head', 'mask', 'torso', 'hands', 'belt', 'feet', 'ring1', 'ring2', 'amulet', 'mainHand', 'offHand'].map(slot => (
+                  <button 
+                    key={slot} 
+                    className="btn-ghost text-sm text-left px-3 py-2 border border-[var(--border)] hover:border-accent hover:bg-accent/10 transition-colors"
+                    onClick={() => {
+                      store.equipItem(activeCharId!, equipMenuTarget.id, slot);
+                      setEquipMenuTarget(null);
+                    }}
+                  >
+                    Equip to <span className="font-bold capitalize">{slot.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* EXTRAPLANAR OVERLAY */}
+        {showExtraPlanar && (
+           <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col animate-fade-in-up p-8">
+             <div className="flex justify-between items-center mb-6 border-b border-secondary/30 pb-4">
+               <div>
+                 <h1 className="font-heading text-3xl text-secondary" style={{ textShadow: '0 0 20px var(--secondary-glow)' }}>🌌 ExtraPlanar Storage</h1>
+                 <span className="text-sm text-white/50">{extraPlanarStorage.length} / 150 Capacity</span>
+               </div>
+               <button onClick={() => setShowExtraPlanar(false)} className="text-3xl text-white/50 hover:text-white transition-colors">✕</button>
+             </div>
+             
+             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                 {extraPlanarStorage.map(item => (
+                   <div 
+                     key={item.id} 
+                     className="glass-panel p-3 cursor-pointer hover:border-secondary transition-colors flex flex-col justify-between h-32 bg-black/40 relative group"
+                     onClick={() => { setEquipMenuTarget(item); setShowExtraPlanar(false); }}
+                   >
+                     <div className="font-bold text-sm text-white/90 line-clamp-2">{item.name}</div>
+                     <div className="text-xs text-secondary mt-1">{item.type}</div>
+                     {item.damage && <div className="text-xs text-accent mt-auto pt-2">{item.damage}</div>}
+                     <div className="absolute inset-0 bg-secondary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                        <span className="text-xs font-bold text-white bg-black/80 px-2 py-1 rounded">Equip</span>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           </div>
+        )}
+        {activeTab === 'mount' && (
+          <div className="glass-panel animate-fade-in-up text-center p-8">
+            <h2 className="text-2xl font-bold mb-4 text-accent">🐎 Mount & Vehicle</h2>
+            <p className="text-muted-foreground">Manage your steeds, carts, and ships here.</p>
+          </div>
+        )}
+        {activeTab === 'abilities' && (
+          <div className="glass-panel animate-fade-in-up text-center p-8">
+            <h2 className="text-2xl font-bold mb-4 text-accent">✨ Abilities</h2>
+            <p className="text-muted-foreground">Track your class features, feats, and unique skills.</p>
+          </div>
+        )}
+        {activeTab === 'botany' && (
+          <div className="glass-panel animate-fade-in-up text-center p-8">
+            <h2 className="text-2xl font-bold mb-4 text-accent">🌿 Botany</h2>
+            <p className="text-muted-foreground">Discover and document flora, herbs, and natural ingredients.</p>
+          </div>
+        )}
+        {activeTab === 'spells' && (
+          <SpellsCompendium role={role} />
+        )}
+        {activeTab === 'items' && (
+          <MagicItemsCompendium role={role} store={store} activeCharId={activeCharId} characterProfiles={characterProfiles} />
+        )}
+        {activeTab === 'equipment' && (
+          <EquipmentCompendium role={role} store={store} activeCharId={activeCharId} characterProfiles={characterProfiles} />
+        )}
+        {activeTab === 'feats' && (
+          <FeatsCompendium />
+        )}
+        {activeTab === 'curses' && (
+          <div className="glass-panel animate-fade-in-up text-center p-8">
+            <h2 className="text-2xl font-bold mb-4 text-danger">🩸 Curses & Afflictions</h2>
+            <p className="text-muted-foreground">Track ongoing diseases, curses, and their stage progressions here.</p>
+          </div>
+        )}
+        {activeTab === 'diseases' && (
+          <div className="glass-panel animate-fade-in-up text-center p-8">
+            <h2 className="text-2xl font-bold mb-4 text-warning">🦠 Diseases</h2>
+            <p className="text-muted-foreground">Medical codex and disease rules.</p>
+          </div>
+        )}
+        {activeTab === 'recipes' && (
+          <div className="glass-panel animate-fade-in-up text-center p-8">
+            <h2 className="text-2xl font-bold mb-4 text-success">🧪 Recipes</h2>
+            <p className="text-muted-foreground">Crafting formulas and alchemy recipes.</p>
+          </div>
+        )}
+
         </div>
+        {/* Glossary Full-Screen Overlay */}
+        {isGlossaryOpen && (
+          <div className="glossary-overlay">
+            <div className="glossary-header">
+              <button className="glossary-close-btn" onClick={() => setIsGlossaryOpen(false)}>
+                <span>◀</span> Return to Menu
+              </button>
+            </div>
+            
+            <h2 style={{ fontFamily: 'var(--font-decorative)', fontSize: '2rem', color: 'var(--secondary)', textShadow: '0 0 20px var(--secondary-glow)', marginBottom: '2rem' }}>
+              Glossary & Lore
+            </h2>
+
+            <div className="glossary-grid">
+              {(role === 'dm'
+                ? ['bestiary', 'botany', 'spells', 'items', 'equipment', 'curses', 'diseases', 'recipes', 'feats']
+                : ['botany', 'spells', 'items', 'equipment', 'curses', 'diseases', 'recipes', 'feats']
+              ).map(tab => (
+                <button 
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab as any);
+                    setIsGlossaryOpen(false);
+                  }}
+                  className={`master-grid-btn ${activeTab === tab ? 'active' : ''}`}
+                  style={{ padding: '1.5rem' }}
+                >
+                  <div className="icon text-3xl">{TAB_ICONS[tab] || '📖'}</div>
+                  <div className="text-xs uppercase tracking-widest font-bold mt-2">{tab}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </ThemeProvider>
   );

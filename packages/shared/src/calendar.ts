@@ -50,9 +50,17 @@ export function calculateDate(blocks: number, config: CalendarConfig): Calculate
   return { year, monthIndex, dayOfMonth, dayOfWeekIndex, totalDaysPassed };
 }
 
-export function formatCalendarDate(blocks: number, config: CalendarConfig): string {
+export function formatCalendarDate(blocks: number, config?: CalendarConfig): string {
+  if (!config) {
+    const defaultWeekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const totalDaysPassed = Math.floor(blocks / 4);
+    const dayOfWeekIndex = totalDaysPassed % 7;
+    return `${defaultWeekdays[dayOfWeekIndex]}, Day ${totalDaysPassed + 1}`;
+  }
+
   const date = calculateDate(blocks, config);
   const monthName = config.months[date.monthIndex]?.name || 'Unknown';
+  const weekdayName = config.weekdays[date.dayOfWeekIndex] || 'Unknown';
   
   const d = date.dayOfMonth;
   let suffix = 'th';
@@ -60,7 +68,7 @@ export function formatCalendarDate(blocks: number, config: CalendarConfig): stri
   else if (d % 10 === 2 && d !== 12) suffix = 'nd';
   else if (d % 10 === 3 && d !== 13) suffix = 'rd';
   
-  return `${d}${suffix} of ${monthName}, Year ${date.year}`;
+  return `${weekdayName}, ${d}${suffix} of ${monthName}, Year ${date.year}`;
 }
 
 export function calculateMoonPhases(totalDaysPassed: number, moons?: MoonConfig[]): CalculatedMoon[] {

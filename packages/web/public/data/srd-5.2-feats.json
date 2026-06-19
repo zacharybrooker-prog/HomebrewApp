@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Alert",
+    "prerequisite": null,
+    "description": "Always on the lookout for danger, you gain the following benefits:\n• You gain a +5 bonus to initiative.\n• You can't be surprised while you are conscious.\n• Other creatures don't gain advantage on attack rolls against you as a result of being unseen by you."
+  },
+  {
+    "name": "Tough",
+    "prerequisite": null,
+    "description": "Your hit point maximum increases by an amount equal to twice your level when you gain this feat. Whenever you gain a level thereafter, your hit point maximum increases by an additional 2 hit points."
+  },
+  {
+    "name": "War Caster",
+    "prerequisite": "The ability to cast at least one spell",
+    "description": "You have practiced casting spells in the midst of combat, learning techniques that grant you the following benefits:\n• You have advantage on Constitution saving throws that you make to maintain your concentration on a spell when you take damage.\n• You can perform the somatic components of spells even when you have weapons or a shield in one or both hands.\n• When a hostile creature's movement provokes an opportunity attack from you, you can use your reaction to cast a spell at the creature, rather than making an opportunity attack."
+  }
+]
