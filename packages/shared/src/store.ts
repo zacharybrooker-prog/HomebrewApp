@@ -118,6 +118,16 @@ export class CampaignStore {
     charMap.clear();
   }
 
+  public updateCharacterProfile(id: string, updates: Partial<CharacterProfile>) {
+    const shared = this.getSharedMap();
+    const characters: CharacterProfile[] = shared.get('characters') || [];
+    const idx = characters.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      characters[idx] = { ...characters[idx], ...updates };
+      shared.set('characters', [...characters]);
+    }
+  }
+
   public toggleLock() {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     const shared = this.getSharedMap();
@@ -165,17 +175,20 @@ export class CampaignStore {
     }
   }
 
-  public updateCharacterHp(charId: string, current: number, max: number) {
+  public updateCharacterHp(charId: string, current: number, max: number, temp: number = 0) {
+    const shared = this.getSharedMap();
+    if (this.role === 'player' && shared.get('locked')) {
+      throw new Error('Sheet is locked by DM');
+    }
     const charMap = this.getCharacterMap(charId);
-    charMap.set('hp', { current, max });
+    charMap.set('hp', { current, max, temp });
 
     // Sync with combat tracker if active
-    const shared = this.getSharedMap();
     const combatState = shared.get('combatState');
     if (combatState && combatState.active) {
       const cIdx = combatState.combatants.findIndex((c: any) => c.id === charId);
       if (cIdx !== -1) {
-        combatState.combatants[cIdx].hp = { current, max };
+        combatState.combatants[cIdx].hp = { current, max, temp };
         shared.set('combatState', { ...combatState });
       }
     }

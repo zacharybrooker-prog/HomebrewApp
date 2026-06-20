@@ -134,6 +134,8 @@ export const CharacterProfileSchema = z.object({
   charClass: z.string(),
   level: z.number().default(1),
   species: z.string().optional(),
+  proficiencies: z.array(z.string()).optional(),
+  features: z.array(z.any()).optional(),
 });
 export type CharacterProfile = z.infer<typeof CharacterProfileSchema>;
 

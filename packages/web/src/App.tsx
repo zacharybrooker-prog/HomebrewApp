@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
-import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate, CONDITIONS_DATA } from '@frogs-world/shared';
-import type { StatFieldDef, Item, StatusInstance, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
-import { HPGauge, StatField, CurrencyRow, SchemaEditor, StatusList, ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, ConditionPopover } from '@frogs-world/ui';
+import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
+import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
+import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet } from '@frogs-world/ui';
 
 import { CombatTracker } from './components/CombatTracker';
 import { SpellsCompendium } from './components/SpellsCompendium';
@@ -11,7 +11,7 @@ import { MapTab } from './components/MapTab';
 import { MagicItemsCompendium } from './components/MagicItemsCompendium';
 import { EquipmentCompendium } from './components/EquipmentCompendium';
 import { FeatsCompendium } from './components/FeatsCompendium';
-import { FeaturesTraitsTab } from './components/FeaturesTraitsTab';
+
 import { CsvImporter } from './components/CsvImporter';
 
 import { Landing } from '@frogs-world/ui';
@@ -19,16 +19,17 @@ import { Landing } from '@frogs-world/ui';
 export function GameApp({ store, initialRole, campaignId }: { store: CampaignStore, initialRole: 'dm' | 'player', campaignId: string }) {
   const [role, setRole] = useState<'dm' | 'player' | null>(initialRole);
   const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'bestiary' | 'events' | 'calendar' | 'journal' | 'settings' | 'map' | 'inventory' | 'mount' | 'abilities' | 'botany' | 'spells' | 'items' | 'equipment' | 'curses' | 'diseases' | 'recipes' | 'glossary' | 'feats'>('sheet');
-  const [sheetTab, setSheetTab] = useState<'inventory' | 'features'>('inventory');
+
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const [lanTarget, setLanTarget] = useState(`ws://localhost:3000/ws/campaign`);
   
   const [schema, setSchema] = useState<StatFieldDef[]>([]);
-  const [locked, setLocked] = useState(false);
-  const [activePopover, setActivePopover] = useState<{ condition: string } | null>(null);
-  const [conditions, setConditions] = useState<string[]>([]);
+
   const [timeState, setTimeState] = useState<TimeState>({ blocks: 0 });
+
+
+
   const [showItemManager, setShowItemManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [feed, setFeed] = useState<{id: string, message: string}[]>([]);
@@ -77,13 +78,13 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   
   const [localTheme, setLocalTheme] = useState(localStorage.getItem('frogs_theme') || 'mycelium');
   
-  const [hp, setHp] = useState({ current: 10, max: 10 });
+
   const [baseStats, setBaseStats] = useState<Record<string, any>>({});
-  const [currencies, setCurrencies] = useState<Record<string, number>>({});
+
   const [mainStorage, setMainStorage] = useState<Item[]>([]);
   const [extraPlanarStorage, setExtraPlanarStorage] = useState<Item[]>([]);
   const [equipment, setEquipment] = useState<EquipmentMap>({} as EquipmentMap);
-  const [statuses, setStatuses] = useState<StatusInstance[]>([]);
+
   const [activeCharacter, setActiveCharacter] = useState<any>(null);
   
   const [notes, setNotes] = useState<Note[]>([]);
@@ -149,7 +150,6 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
 
     const updateSharedState = () => {
       setSchema([...(sharedMap.get('schema') || [])]);
-      setLocked(sharedMap.get('locked') || false);
       setTimeState({ ...(sharedMap.get('timeState') || { blocks: 0 }) });
       setFeed([...(sharedMap.get('feed') || [])]);
       
@@ -253,14 +253,10 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
     const charMap = store.getCharacterMap(activeCharId);
     
     const updateCharState = () => {
-      setHp({ ...(charMap.get('hp') || { current: 10, max: 10 }) });
       setBaseStats({ ...(charMap.get('stats') || {}) });
-      setCurrencies({ ...(charMap.get('currencies') || {}) });
       setMainStorage([...(charMap.get('mainStorage') || [])]);
       setExtraPlanarStorage([...(charMap.get('extraPlanarStorage') || [])]);
       setEquipment({ ...(charMap.get('equipment') || {}) } as EquipmentMap);
-      setStatuses([...(charMap.get('statuses') || [])]);
-      setConditions([...(charMap.get('conditions') || [])]);
       
       const p = (store.getCharacterProfiles() as any).find((c:any) => c.id === activeCharId) || {};
       setActiveCharacter({
@@ -281,27 +277,6 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
       charMap.unobserve(updateCharState);
     };
   }, [store, activeCharId]);
-
-  const handleUpdateStat = (statId: string, val: number) => {
-    if (!activeCharId) return;
-    try { store.updateCharacterStat(activeCharId, statId, val); } catch (e: any) { window.alert(e.message); }
-  };
-  const handleUpdateHpCurrent = (val: number) => {
-    if (!activeCharId) return;
-    try { store.updateCharacterHp(activeCharId, val, hp.max); } catch (e: any) { window.alert(e.message); }
-  };
-  const handleUpdateHpMax = (val: number) => {
-    if (!activeCharId) return;
-    try { store.updateCharacterHp(activeCharId, hp.current, val); } catch (e: any) { window.alert(e.message); }
-  };
-
-  const handleToggleLock = () => {
-    try { store.toggleLock(); } catch (e: any) { window.alert(e.message); }
-  };
-
-  const handleAddStat = (name: string) => {
-    try { store.addStatFieldDef({ id: name.toLowerCase().replace(/\s+/g, '_'), label: name, type: 'number', order: schema.length }); } catch (e: any) { window.alert(e.message); }
-  };
 
   const handleAdvanceTime = (blocks: number) => {
     if (role !== 'dm') return;
@@ -449,6 +424,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
 
   return (
     <ThemeProvider phaseIndex={currentVisualBlock % 4}>
+      {activeTab !== 'sheet' && (
       <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-lg" style={{ height: '80px', backdropFilter: 'blur(12px)', background: 'rgba(10, 10, 15, 0.90)', borderBottom: '1px solid var(--border-accent)' }}>
         {/* Left Zone: Location, Time & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -529,7 +505,68 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
           </div>
         </div>
       </header>
+      )}
 
+      {activeTab === 'sheet' ? (
+        <div className="w-full min-h-screen bg-stone-950">
+          {role === 'dm' && (
+            <div className="p-4 bg-stone-900 border-b border-yellow-700/50">
+              <div className="flex justify-between items-center max-w-6xl mx-auto">
+                <h3 className="text-yellow-500 font-bold m-0 text-sm">⚙ DM Controls</h3>
+                <select 
+                  className="bg-stone-950 text-stone-300 border border-yellow-700/50 rounded px-2 py-1 text-sm"
+                  value={activeCharId || ''}
+                  onChange={e => setActiveCharId(e.target.value || null)}
+                >
+                  <option value="">-- Select Sheet --</option>
+                  {(Array.isArray(characterProfiles) ? characterProfiles : []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+          <div className="animate-fade-in-up">
+            {(() => {
+              const activeProfile = (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId) as any || {};
+              const mergedCharacter = activeCharacter ? { ...activeCharacter, proficiencies: activeProfile.proficiencies || [] } : activeProfile;
+              return (
+                <TraditionalSheet
+                  activeCharacter={mergedCharacter}
+                  hp={{ current: activeCharacter?.hp?.current ?? 10, max: activeCharacter?.hp?.max ?? 10, temp: activeCharacter?.hp?.temp ?? 0 }}
+                  stats={baseStats}
+                  equipment={Object.values(equipment).filter(Boolean) as any}
+                  features={mergedCharacter.features || []}
+              onNavigate={(tab) => {
+                if (tab === 'Overview') {
+                  setActiveTab(null as any);
+                } else {
+                  setActiveTab(tab.toLowerCase() as any);
+                }
+              }}
+              onUpdateStat={(stat, value) => {
+                if (activeCharId) store.updateCharacterStat(activeCharId, stat, value);
+              }}
+              onUpdateHp={(current, max, temp) => {
+                if (activeCharId) store.updateCharacterHp(activeCharId, current, max, temp);
+              }}
+              onToggleProficiency={(skill) => {
+                if (activeCharId) {
+                  const activeProfile = (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId) as any || {};
+                  const profs = activeProfile.proficiencies || [];
+                  const newProfs = profs.includes(skill) 
+                    ? profs.filter((p: string) => p !== skill)
+                    : [...profs, skill];
+                  store.updateCharacterProfile(activeCharId, { proficiencies: newProfs });
+                }
+              }}
+              onAddItem={() => {
+                setActiveTab('items' as any);
+              }}
+            />
+            );
+          })()}
+          </div>
+        </div>
+      ) : (
       <div className="w-full min-h-screen flex flex-col items-center pb-16 pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
@@ -697,220 +734,6 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
           {activeTab === 'map' && (
             <div className="w-full animate-fade-in-up">
               <MapTab store={store} role={role as 'dm' | 'player'} campaignId={campaignId} />
-            </div>
-          )}
-
-          {role === 'dm' && activeTab === 'sheet' && (
-            <div className="flex flex-col gap-4 animate-fade-in-up">
-              <div className="section-heading flex justify-between items-center">
-                <h3 style={{ margin: 0 }}>⚙ DM Controls</h3>
-                <select 
-                  className="select-fantasy text-xs w-48"
-                  value={activeCharId || ''}
-                  onChange={e => setActiveCharId(e.target.value || null)}
-                >
-                  <option value="">-- Select Sheet --</option>
-                  {(Array.isArray(characterProfiles) ? characterProfiles : []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-              <div className="flex gap-3">
-                <button onClick={handleToggleLock} className="btn-danger flex-1 min-h-[44px]">
-                  {locked ? '🔒 Unlock' : '🔓 Lock'}
-                </button>
-              </div>
-              
-              <div className="flex gap-3">
-                <button disabled className="btn-ghost flex-1 opacity-40 cursor-not-allowed min-h-[44px]" style={{ fontSize: '11px' }}>
-                  ⭐ Custom Calendar
-                </button>
-                <button disabled className="btn-ghost flex-1 opacity-40 cursor-not-allowed min-h-[44px]" style={{ fontSize: '11px' }}>
-                  ⭐ Custom Cycles
-                </button>
-              </div>
-
-              <SchemaEditor onAddStat={handleAddStat} />
-            </div>
-          )}
-
-          {activeTab === 'sheet' && (
-            <div className="glass-panel flex flex-col gap-5 animate-fade-in-up">
-              
-              <div className="section-heading">
-                <h2 style={{ margin: 0 }}>
-                  {activeCharacter?.name || (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId)?.name || 'Adventurer'}
-                </h2>
-                <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
-                  {activeCharacter?.className || activeCharacter?.charClass || (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId)?.charClass || 'Unknown Class'}
-                </div>
-              </div>
-
-              {/* Character Sheet Conditions Banner */}
-              {conditions.length > 0 && (
-                <div className="border border-red-500/50 bg-red-950/30 rounded-lg p-3 relative shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-                  <div className="text-[10px] uppercase tracking-widest font-bold text-red-500 mb-2 flex items-center gap-2">
-                    <span>⚠️ Active Conditions</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {conditions.map((cond: string) => (
-                      <div key={cond} className="relative">
-                        <button
-                          onClick={() => setActivePopover({ condition: cond })}
-                          className="text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full border shadow-sm transition-colors min-h-[44px]"
-                          style={{
-                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
-                            color: '#eab308',
-                            borderColor: 'rgba(234, 179, 8, 0.4)'
-                          }}
-                        >
-                          {cond}
-                        </button>
-                        {activePopover?.condition === cond && (
-                          <ConditionPopover 
-                            condition={cond} 
-                            rulesText={CONDITIONS_DATA[cond] || 'No rules available.'}
-                            onClose={() => setActivePopover(null)} 
-                            // No onRemove prop, players cannot clear their own statuses
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            
-              <StatusList statuses={statuses} />
-            
-
-              <div>
-                <div className="sub-label">Hit Points</div>
-                <HPGauge current={hp.current} max={hp.max} onChangeCurrent={handleUpdateHpCurrent} onChangeMax={handleUpdateHpMax} />
-              </div>
-            
-              {(() => {
-                const getStatBonus = (statId: string) => {
-                  let bonus = 0;
-                  for (const item of Object.values(equipment)) {
-                    if (item && Array.isArray(item.effectsOnEquip)) {
-                      for (const eff of item.effectsOnEquip) {
-                        if (eff.type === 'modify_stat' && eff.payload && eff.payload.statId === statId) {
-                          bonus += eff.payload.modifier || eff.payload.amount || 0;
-                        }
-                      }
-                    }
-                  }
-                  return bonus;
-                };
-
-                return (
-                  <div>
-                    <div className="sub-label">Ability Scores</div>
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      {['ac', 'init'].map(coreId => {
-                        const def = (Array.isArray(schema) ? schema : []).find(s => s.id === coreId);
-                        if (!def) return null;
-                        const displayValue = baseStats[def.id] || 0;
-                        const trueBaseValue = displayValue - getStatBonus(def.id);
-                        return (
-                          <StatField 
-                            key={def.id}
-                            label={def.label} 
-                            value={displayValue} 
-                            baseValue={trueBaseValue}
-                            variant="steel"
-                            onDecrement={() => handleUpdateStat(def.id, trueBaseValue - 1)} 
-                            onIncrement={() => handleUpdateStat(def.id, trueBaseValue + 1)} 
-                          />
-                        );
-                      })}
-                      
-                      {(Array.isArray(schema) ? schema : []).filter(s => s.id !== 'ac' && s.id !== 'init').map(def => {
-                        const displayValue = baseStats[def.id] || 0;
-                        const trueBaseValue = displayValue - getStatBonus(def.id);
-                        return (
-                          <div key={def.id} className="relative group">
-                        {role === 'dm' && (
-                          <button 
-                            onClick={() => { if(window.confirm(`Delete ${def.label}?`)) { try { store.removeStatFieldDef(def.id); } catch(e:any){ alert(e.message); } } }}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex justify-center items-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:scale-110 shadow-md border border-red-700"
-                            title="Delete Stat"
-                          >
-                            ×
-                          </button>
-                        )}
-                        <StatField 
-                          label={def.label} 
-                          value={displayValue} 
-                          baseValue={trueBaseValue}
-                          onDecrement={() => handleUpdateStat(def.id, trueBaseValue - 1)} 
-                          onIncrement={() => handleUpdateStat(def.id, trueBaseValue + 1)} 
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
-
-              <div className="flex gap-2 mt-4 border-b border-[var(--border)] pb-2">
-                <button 
-                  className={`btn-ghost ${sheetTab === 'inventory' ? 'border-b-2 border-accent text-accent' : ''}`}
-                  onClick={() => setSheetTab('inventory')}
-                >
-                  🎒 Inventory & Treasury
-                </button>
-                <button 
-                  className={`btn-ghost ${sheetTab === 'features' ? 'border-b-2 border-accent text-accent' : ''}`}
-                  onClick={() => setSheetTab('features')}
-                >
-                  ⭐ Features & Traits
-                </button>
-              </div>
-
-              {sheetTab === 'inventory' && (
-                <div className="animate-fade-in flex flex-col gap-5 pt-4">
-                  <div>
-                    <div className="sub-label">💰 Treasury</div>
-                    {store.getCurrencyDefs().map(def => {
-                      const amount = currencies[def.id] || 0;
-                      return (
-                        <CurrencyRow 
-                          key={def.id} 
-                          label={def.name || def.id} 
-                          amount={amount} 
-                        />
-                      );
-                    })}
-                  </div>
-
-                  <hr className="divider-fantasy" />
-
-                  <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="sub-label mb-0">🎒 Inventory</div>
-                      <button 
-                        onClick={() => setShowItemManager(true)}
-                        className="text-xs font-bold font-heading uppercase text-accent border border-accent/30 px-2 py-1 rounded hover:bg-accent/10 transition-colors"
-                      >
-                        + Add Item
-                      </button>
-                    </div>
-                    
-                    <button 
-                      onClick={() => setActiveTab('inventory')}
-                      className="btn-ghost py-4 flex flex-col items-center gap-2 border border-[var(--border-accent)]"
-                      style={{ background: 'rgba(0,0,0,0.3)' }}
-                    >
-                      <span className="text-xl">🎒</span>
-                      <span className="font-heading uppercase tracking-widest text-accent text-sm">Open Bag of Holding</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {sheetTab === 'features' && activeCharacter && (
-                <FeaturesTraitsTab character={activeCharacter as any} store={store} />
-              )}
             </div>
           )}
 
@@ -1336,8 +1159,11 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         )}
 
         </div>
-        {/* Glossary Full-Screen Overlay */}
-        {isGlossaryOpen && (
+      </div>
+      )}
+
+      {/* Glossary Full-Screen Overlay */}
+      {isGlossaryOpen && (
           <div className="glossary-overlay">
             <div className="glossary-header">
               <button className="glossary-close-btn" onClick={() => setIsGlossaryOpen(false)}>
@@ -1370,7 +1196,6 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             </div>
           </div>
         )}
-      </div>
     </ThemeProvider>
   );
 }
