@@ -18,6 +18,11 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
+import { GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
+
+export const googleProvider = new GoogleAuthProvider();
+export const discordProvider = new OAuthProvider('discord.com');
+
 export const signIn = () => signInAnonymously(auth);
 
 export const observeAuth = (callback: (user: User | null) => void) => {

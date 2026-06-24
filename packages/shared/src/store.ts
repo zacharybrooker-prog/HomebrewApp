@@ -42,6 +42,43 @@ export class CampaignStore {
     return this.doc.getMap('dm');
   }
 
+  public importVaultCharacter(charData: any): void {
+    if (!charData || !charData.id) return;
+    const shared = this.getSharedMap();
+    const characters: CharacterProfile[] = shared.get('characters') || [];
+    
+    // Check if character profile exists
+    if (!characters.find(c => c.id === charData.id)) {
+      shared.set('characters', [...characters, { 
+        id: charData.id, 
+        name: charData.name || 'Unnamed', 
+        charClass: charData.charClass || '',
+        proficiencies: charData.proficiencies || []
+      }]);
+    } else {
+      // Update existing profile name/class
+      const newChars = characters.map(c => 
+        c.id === charData.id ? { ...c, name: charData.name || c.name, charClass: charData.charClass || c.charClass, proficiencies: charData.proficiencies || c.proficiencies || [] } : c
+      );
+      shared.set('characters', newChars);
+    }
+    
+    const charMap = this.getCharacterMap(charData.id);
+    
+    // Safely write stats and HP
+    if (charData.stats) {
+      charMap.set('stats', charData.stats);
+    }
+    if (charData.hp) {
+      charMap.set('hp', charData.hp);
+    }
+    
+    // Handle level
+    if (charData.level) {
+      charMap.set('level', charData.level);
+    }
+  }
+
   public getCharacterMap(characterId: string): Y.Map<any> {
     return this.doc.getMap(`character:${characterId}`);
   }
@@ -54,6 +91,18 @@ export class CampaignStore {
   public setLocationName(name: string) {
     if (this.role !== 'dm') throw new Error('Unauthorized');
     this.getSharedMap().set('locationName', name);
+  }
+
+  // --- Settings ---
+  public getSettings(): { strictSpells: boolean } {
+    const defaultSettings = { strictSpells: true };
+    return this.getSharedMap().get('settings') || defaultSettings;
+  }
+
+  public updateSettings(updates: Partial<{ strictSpells: boolean }>) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    const current = this.getSettings();
+    this.getSharedMap().set('settings', { ...current, ...updates });
   }
 
   // --- Interactive Map ---

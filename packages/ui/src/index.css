@@ -3,115 +3,25 @@
 @tailwind utilities;
 
 @layer base {
-  :root, .theme-classic-dark {
-    --background: #0a0a0c;
-    --surface: rgba(18, 18, 22, 0.85);
-    --surface-solid: #12121a;
-    --text: #e8e6e3;
-    --text-muted: #6b6b7b;
-    --accent: #e11d48;
-    --accent-glow: rgba(225, 29, 72, 0.4);
-    --secondary: #d4af37;
-    --secondary-glow: rgba(212, 175, 55, 0.3);
+  :root {
+    --background: #080808;
+    --surface: rgba(15, 15, 15, 0.9);
+    --surface-solid: #0f0f0f;
+    --text: #e5e5e5;
+    --text-muted: #888888;
+    --accent: #991b1b;
+    --accent-glow: rgba(153, 27, 27, 0.6);
+    --secondary: #7f1d1d;
+    --secondary-glow: rgba(127, 29, 29, 0.4);
     --danger: #dc2626;
-    --success: #22c55e;
-    --border: rgba(255, 255, 255, 0.08);
-    --border-accent: rgba(225, 29, 72, 0.3);
-    --glass-bg: rgba(18, 18, 22, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.06);
+    --success: #15803d;
+    --border: #262626;
+    --border-accent: rgba(153, 27, 27, 0.5);
+    --glass-bg: rgba(10, 10, 10, 0.85);
+    --glass-border: #333333;
     --font-heading: 'Cinzel', serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --font-decorative: 'Cinzel Decorative', 'Cinzel', serif;
-  }
-
-  .theme-mycelium {
-    --background: #060a0f;
-    --surface: rgba(10, 15, 20, 0.85);
-    --surface-solid: #0a0f14;
-    --text: #e0f2f1;
-    --text-muted: #6b8583;
-    --accent: #00ff9d;
-    --accent-glow: rgba(0, 255, 157, 0.4);
-    --secondary: #a3ffdd;
-    --secondary-glow: rgba(163, 255, 221, 0.3);
-    --danger: #9c27b0;
-    --success: #22c55e;
-    --border: rgba(0, 255, 157, 0.15);
-    --border-accent: rgba(0, 255, 157, 0.4);
-    --glass-bg: rgba(6, 10, 15, 0.75);
-    --glass-border: rgba(0, 255, 157, 0.1);
-  }
-
-  .theme-classic-light {
-    --background: #f0f0f5;
-    --surface: #ffffff;
-    --surface-solid: #ffffff;
-    --text: #000000;
-    --text-muted: #333333;
-    --accent: #b91c1c;
-    --accent-glow: rgba(185, 28, 28, 0.2);
-    --secondary: #925c00;
-    --secondary-glow: rgba(146, 92, 0, 0.2);
-    --danger: #991b1b;
-    --success: #15803d;
-    --border: #cccccc;
-    --border-accent: rgba(185, 28, 28, 0.4);
-    --glass-bg: rgba(255, 255, 255, 0.95);
-    --glass-border: #999999;
-  }
-
-  .theme-enchanted-forest {
-    --background: #020a06;
-    --surface: rgba(10, 20, 15, 0.85);
-    --surface-solid: #05100a;
-    --text: #e0f2e9;
-    --text-muted: #5c8570;
-    --accent: #ec4899; /* Vibrant Floral Pink */
-    --accent-glow: rgba(236, 72, 153, 0.5);
-    --secondary: #fef08a; /* Bright Fae Yellow */
-    --secondary-glow: rgba(254, 240, 138, 0.4);
-    --danger: #991b1b;
-    --success: #10b981;
-    --border: rgba(16, 185, 129, 0.3); /* Dark green vines */
-    --border-accent: rgba(236, 72, 153, 0.4);
-    --glass-bg: rgba(6, 15, 10, 0.85);
-    --glass-border: rgba(16, 185, 129, 0.4);
-  }
-
-  .theme-volcanic {
-    --background: #080302;
-    --surface: rgba(20, 8, 5, 0.9);
-    --surface-solid: #140805;
-    --text: #ffedd5;
-    --text-muted: #9a6851;
-    --accent: #f97316;
-    --accent-glow: rgba(249, 115, 22, 0.6);
-    --secondary: #ef4444;
-    --secondary-glow: rgba(239, 68, 68, 0.5);
-    --danger: #b91c1c;
-    --success: #f59e0b;
-    --border: rgba(249, 115, 22, 0.2);
-    --border-accent: rgba(249, 115, 22, 0.5);
-    --glass-bg: rgba(15, 5, 2, 0.85);
-    --glass-border: rgba(249, 115, 22, 0.3);
-  }
-
-  .theme-eldritch {
-    --background: #0d0614; /* Deep oceanic purple */
-    --surface: rgba(26, 15, 46, 0.85);
-    --surface-solid: #1a0f2e;
-    --text: #e0f7fa;
-    --text-muted: #6b8c96;
-    --accent: #00F5FF; /* Bioluminescent light blue */
-    --accent-glow: rgba(0, 245, 255, 0.6);
-    --secondary: #7FFF00; /* Necrotic green */
-    --secondary-glow: rgba(127, 255, 0, 0.5);
-    --danger: #ff0055;
-    --success: #00F5FF;
-    --border: rgba(127, 255, 0, 0.3);
-    --border-accent: rgba(0, 245, 255, 0.5);
-    --glass-bg: rgba(46, 26, 71, 0.7);
-    --glass-border: rgba(127, 255, 0, 0.4);
   }
 
   * {
@@ -124,9 +34,11 @@
 
   body {
     background-color: var(--background);
+    background-image: url('/grimdark-stone-bg.png');
+    background-size: cover;
+    background-attachment: fixed;
     color: var(--text);
     font-family: var(--font-body);
-    /* Safe areas for iOS/Android PWA notches */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
@@ -214,23 +126,12 @@
   /* Glass Panel - Base */
   .glass-panel {
     padding: 1.25rem;
+    background: var(--glass-bg);
+    border: 8px solid transparent;
+    border-image: url('/grimdark-iron-border.png') 30 stretch;
+    border-radius: 4px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9), 0 8px 30px rgba(0, 0, 0, 0.8);
     transition: all 0.3s ease;
-  }
-
-  .theme-classic-dark .glass-panel {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  }
-
-  .theme-classic-light .glass-panel {
-    background: var(--glass-bg);
-    border: 2px solid var(--glass-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   }
 
   /* Glass Panel - Organic Fungal Husk */
@@ -484,152 +385,93 @@
     cursor: pointer;
   }
 
-  /* --- Classic Dark Theme Buttons --- */
-  .theme-classic-dark .btn-fantasy {
+  /* --- Global Grimdark Buttons --- */
+  .btn-fantasy {
     padding: 0.5rem 1.25rem;
     font-weight: 700;
     font-size: 0.875rem;
     color: #fff;
-    background: linear-gradient(135deg, var(--accent) 0%, #9f1239 100%);
-    border: 1px solid rgba(225, 29, 72, 0.5);
-    border-radius: 8px;
-    box-shadow: 0 0 12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.1);
-    transition: all 0.2s ease;
-    overflow: hidden;
+    background: linear-gradient(180deg, #3f3f46 0%, #18181b 100%);
+    border: 2px solid #52525b;
+    border-bottom: 4px solid #09090b;
+    border-radius: 4px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 4px 6px rgba(0,0,0,0.8);
+    transition: all 0.1s ease;
+    text-shadow: 0 1px 2px #000;
   }
-  .theme-classic-dark .btn-fantasy:hover {
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 0 20px var(--accent-glow), 0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15);
+  .btn-fantasy:hover {
+    background: linear-gradient(180deg, #52525b 0%, #27272a 100%);
+    border-color: #71717a;
   }
-  .theme-classic-dark .btn-fantasy:active {
-    transform: translateY(0) scale(0.98);
+  .btn-fantasy:active {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.8);
   }
 
-  .theme-classic-dark .btn-gold {
+  .btn-gold {
     padding: 0.5rem 1.25rem;
     font-weight: 700;
     font-size: 0.875rem;
     color: #fff;
-    background: linear-gradient(135deg, var(--secondary) 0%, #b8941f 100%);
-    border: 1px solid rgba(212, 175, 55, 0.5);
-    border-radius: 8px;
-    box-shadow: 0 0 12px var(--secondary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
-    transition: all 0.2s ease;
+    background: linear-gradient(180deg, #854d0e 0%, #422006 100%);
+    border: 2px solid #a16207;
+    border-bottom: 4px solid #2e1003;
+    border-radius: 4px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 6px rgba(0,0,0,0.8);
+    transition: all 0.1s ease;
+    text-shadow: 0 1px 2px #000;
   }
-  .theme-classic-dark .btn-gold:hover {
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 0 20px var(--secondary-glow), 0 4px 15px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.25);
+  .btn-gold:hover {
+    background: linear-gradient(180deg, #a16207 0%, #713f12 100%);
+    border-color: #ca8a04;
   }
-  .theme-classic-dark .btn-gold:active {
-    transform: translateY(0) scale(0.98);
+  .btn-gold:active {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.8);
   }
 
-  .theme-classic-dark .btn-ghost {
+  .btn-ghost {
     padding: 0.5rem 1rem;
     font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.8rem;
     color: var(--text-muted);
     background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    transition: all 0.2s ease;
+    border: 2px solid var(--border);
+    border-bottom: 2px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.1s ease;
   }
-  .theme-classic-dark .btn-ghost:hover {
+  .btn-ghost:hover {
     color: var(--text);
     border-color: var(--accent);
-    background: rgba(225, 29, 72, 0.08);
-    box-shadow: 0 0 8px rgba(225, 29, 72, 0.15);
+    background: rgba(153, 27, 27, 0.2);
+    box-shadow: inset 0 0 10px rgba(153, 27, 27, 0.4);
   }
 
-  .theme-classic-dark .btn-danger {
+  .btn-danger {
     padding: 0.5rem 1.25rem;
     font-weight: 700;
     font-size: 0.875rem;
     color: #fff;
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    border: 1px solid rgba(220, 38, 38, 0.5);
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
-    transition: all 0.2s ease;
+    background: linear-gradient(180deg, #991b1b 0%, #450a0a 100%);
+    border: 2px solid #b91c1c;
+    border-bottom: 4px solid #290404;
+    border-radius: 4px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 6px rgba(0,0,0,0.8);
+    transition: all 0.1s ease;
+    text-shadow: 0 1px 2px #000;
   }
-  .theme-classic-dark .btn-danger:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0 18px rgba(220, 38, 38, 0.4);
+  .btn-danger:hover {
+    background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
+    border-color: #dc2626;
   }
-
-  /* --- Classic Light Theme High-Contrast Buttons --- */
-  .theme-classic-light .btn-fantasy {
-    padding: 0.5rem 1.25rem;
-    font-weight: 800;
-    font-size: 0.875rem;
-    color: #ffffff;
-    background: var(--accent);
-    border: 2px solid #7f1d1d;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-  }
-  .theme-classic-light .btn-fantasy:hover {
-    transform: translateY(-1px);
-    background: #991b1b;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-  }
-  .theme-classic-light .btn-fantasy:active {
-    transform: translateY(0);
-  }
-
-  .theme-classic-light .btn-gold {
-    padding: 0.5rem 1.25rem;
-    font-weight: 800;
-    font-size: 0.875rem;
-    color: #ffffff;
-    background: var(--secondary);
-    border: 2px solid #713f12;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-  }
-  .theme-classic-light .btn-gold:hover {
-    transform: translateY(-1px);
-    background: #854d0e;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-  }
-  .theme-classic-light .btn-gold:active {
-    transform: translateY(0);
-  }
-
-  .theme-classic-light .btn-ghost {
-    padding: 0.5rem 1rem;
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--text);
-    background: transparent;
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    transition: all 0.2s ease;
-  }
-  .theme-classic-light .btn-ghost:hover {
-    border-color: var(--accent);
-    background: rgba(185, 28, 28, 0.05);
-  }
-
-  .theme-classic-light .btn-danger {
-    padding: 0.5rem 1.25rem;
-    font-weight: 800;
-    font-size: 0.875rem;
-    color: #ffffff;
-    background: #dc2626;
-    border: 2px solid #991b1b;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-  }
-  .theme-classic-light .btn-danger:hover {
-    transform: translateY(-1px);
-    background: #b91c1c;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  .btn-danger:active {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.8);
   }
 
 
@@ -1015,66 +857,62 @@
     box-shadow: 0 0 12px var(--accent-glow);
   }
 
-  /* Base Input styling */
+  /* Global Grimdark Input styling */
   .input-fantasy, .select-fantasy {
     width: 100%;
     padding: 0.5rem 0.75rem;
     font-family: var(--font-body);
     font-size: 0.875rem;
     color: var(--text);
-    border-radius: 8px;
+    background: #09090b;
+    border: 2px solid #27272a;
+    border-bottom: 2px solid #3f3f46;
+    border-radius: 4px;
     outline: none;
     transition: all 0.2s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+  }
+  .input-fantasy:focus, .select-fantasy:focus {
+    border-color: #7f1d1d;
+    background: #18181b;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(153, 27, 27, 0.4);
   }
   .select-fantasy {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b7b' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     padding-right: 2rem;
   }
 
-  /* Dark Theme Inputs */
-  .theme-classic-dark .input-fantasy,
-  .theme-mycelium .input-fantasy,
-  .theme-enchanted-forest .input-fantasy,
-  .theme-volcanic .input-fantasy,
-  .theme-eldritch .input-fantasy,
-  .theme-classic-dark .select-fantasy,
-  .theme-mycelium .select-fantasy,
-  .theme-enchanted-forest .select-fantasy,
-  .theme-volcanic .select-fantasy,
-  .theme-eldritch .select-fantasy {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid var(--border);
+  /* Grimdark Character Tome Card */
+  .tome-card {
+    position: relative;
+    background-color: #1a1512;
+    background-image: url('/character-tome-cover.png');
+    background-size: cover;
+    background-position: center;
+    border: 3px solid #291811;
+    border-left: 12px solid #140b08; /* Spine of the book */
+    border-radius: 4px 12px 12px 4px;
+    box-shadow: inset 2px 0 10px rgba(0,0,0,0.9), 0 6px 15px rgba(0,0,0,0.9), inset -2px 0 5px rgba(255,255,255,0.05);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
   }
-  .theme-classic-dark .input-fantasy:focus,
-  .theme-mycelium .input-fantasy:focus,
-  .theme-enchanted-forest .input-fantasy:focus,
-  .theme-volcanic .input-fantasy:focus,
-  .theme-eldritch .input-fantasy:focus,
-  .theme-classic-dark .select-fantasy:focus,
-  .theme-mycelium .select-fantasy:focus,
-  .theme-enchanted-forest .select-fantasy:focus,
-  .theme-volcanic .select-fantasy:focus,
-  .theme-eldritch .select-fantasy:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow), 0 0 12px var(--accent-glow);
+  .tome-card::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 12px;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.5), transparent);
+  }
+  .tome-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: inset 2px 0 10px rgba(0,0,0,0.9), 0 12px 25px rgba(0,0,0,0.95), 0 0 15px rgba(153, 27, 27, 0.3);
+    border-color: #4a2b20;
   }
 
-  /* Light Theme Inputs */
-  .theme-classic-light .input-fantasy,
-  .theme-classic-light .select-fantasy {
-    background: #ffffff;
-    border: 2px solid var(--border);
-    color: #000000;
-  }
-  .theme-classic-light .input-fantasy:focus,
-  .theme-classic-light .select-fantasy:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow);
-  }
 
   .input-fantasy::placeholder {
     color: var(--text-muted);

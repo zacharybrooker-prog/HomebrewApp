@@ -292,6 +292,9 @@ importers:
       firebase-admin:
         specifier: ^12.0.0
         version: 12.7.0
+      lucide-react:
+        specifier: ^0.370.0
+        version: 0.370.0(react@19.2.7)
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -9170,6 +9173,10 @@ snapshots:
   lucide-react@0.370.0(react@18.3.1):
     dependencies:
       react: 18.3.1
+
+  lucide-react@0.370.0(react@19.2.7):
+    dependencies:
+      react: 19.2.7
 
   lz-string@1.5.0: {}
 

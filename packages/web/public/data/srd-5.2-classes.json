@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Barbarian",
+    "hitDie": 12,
+    "savingThrows": ["STR", "CON"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Animal Handling", "Athletics", "Intimidation", "Nature", "Perception", "Survival"]
+    },
+    "featuresLink": "Barbarian"
+  },
+  {
+    "name": "Bard",
+    "hitDie": 8,
+    "savingThrows": ["DEX", "CHA"],
+    "proficiencyChoices": {
+      "count": 3,
+      "options": ["Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History", "Insight", "Intimidation", "Investigation", "Medicine", "Nature", "Perception", "Performance", "Persuasion", "Religion", "Sleight of Hand", "Stealth", "Survival"]
+    },
+    "featuresLink": "Bard"
+  },
+  {
+    "name": "Cleric",
+    "hitDie": 8,
+    "savingThrows": ["WIS", "CHA"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["History", "Insight", "Medicine", "Persuasion", "Religion"]
+    },
+    "featuresLink": "Cleric"
+  },
+  {
+    "name": "Druid",
+    "hitDie": 8,
+    "savingThrows": ["INT", "WIS"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Arcana", "Animal Handling", "Insight", "Medicine", "Nature", "Perception", "Religion", "Survival"]
+    },
+    "featuresLink": "Druid"
+  },
+  {
+    "name": "Fighter",
+    "hitDie": 10,
+    "savingThrows": ["STR", "CON"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Acrobatics", "Animal Handling", "Athletics", "History", "Insight", "Intimidation", "Perception", "Survival"]
+    },
+    "featuresLink": "Fighter"
+  },
+  {
+    "name": "Monk",
+    "hitDie": 8,
+    "savingThrows": ["STR", "DEX"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Acrobatics", "Athletics", "History", "Insight", "Religion", "Stealth"]
+    },
+    "featuresLink": "Monk"
+  },
+  {
+    "name": "Paladin",
+    "hitDie": 10,
+    "savingThrows": ["WIS", "CHA"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Athletics", "Insight", "Intimidation", "Medicine", "Persuasion", "Religion"]
+    },
+    "featuresLink": "Paladin"
+  },
+  {
+    "name": "Ranger",
+    "hitDie": 10,
+    "savingThrows": ["STR", "DEX"],
+    "proficiencyChoices": {
+      "count": 3,
+      "options": ["Animal Handling", "Athletics", "Insight", "Investigation", "Nature", "Perception", "Stealth", "Survival"]
+    },
+    "featuresLink": "Ranger"
+  },
+  {
+    "name": "Rogue",
+    "hitDie": 8,
+    "savingThrows": ["DEX", "INT"],
+    "proficiencyChoices": {
+      "count": 4,
+      "options": ["Acrobatics", "Athletics", "Deception", "Insight", "Intimidation", "Investigation", "Perception", "Performance", "Persuasion", "Sleight of Hand", "Stealth"]
+    },
+    "featuresLink": "Rogue"
+  },
+  {
+    "name": "Sorcerer",
+    "hitDie": 6,
+    "savingThrows": ["CON", "CHA"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Arcana", "Deception", "Insight", "Intimidation", "Persuasion", "Religion"]
+    },
+    "featuresLink": "Sorcerer"
+  },
+  {
+    "name": "Warlock",
+    "hitDie": 8,
+    "savingThrows": ["WIS", "CHA"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Arcana", "Deception", "History", "Intimidation", "Investigation", "Nature", "Religion"]
+    },
+    "featuresLink": "Warlock"
+  },
+  {
+    "name": "Wizard",
+    "hitDie": 6,
+    "savingThrows": ["INT", "WIS"],
+    "proficiencyChoices": {
+      "count": 2,
+      "options": ["Arcana", "History", "Insight", "Investigation", "Medicine", "Religion"]
+    },
+    "featuresLink": "Wizard"
+  }
+]

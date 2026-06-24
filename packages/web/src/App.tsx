@@ -2,6 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
 import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet } from '@frogs-world/ui';
+import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon } from 'lucide-react';
+
+const User = UserIcon as any;
+const Scroll = ScrollIcon as any;
+const Wand2 = Wand2Icon as any;
+const BookOpen = BookOpenIcon as any;
+import { auth, db } from './firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 import { CombatTracker } from './components/CombatTracker';
 import { SpellsCompendium } from './components/SpellsCompendium';
@@ -13,10 +21,10 @@ import { EquipmentCompendium } from './components/EquipmentCompendium';
 import { FeatsCompendium } from './components/FeatsCompendium';
 
 import { CsvImporter } from './components/CsvImporter';
+import { Vault } from './components/Vault';
+import { useClassFeatures } from './hooks/useClassFeatures';
 
-import { Landing } from '@frogs-world/ui';
-
-export function GameApp({ store, initialRole, campaignId }: { store: CampaignStore, initialRole: 'dm' | 'player', campaignId: string }) {
+export function GameApp({ store, initialRole, campaignId, initialCharacterId, initialCharacterData }: { store: CampaignStore, initialRole: 'dm' | 'player', campaignId: string, initialCharacterId?: string, initialCharacterData?: any }) {
   const [role, setRole] = useState<'dm' | 'player' | null>(initialRole);
   const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'bestiary' | 'events' | 'calendar' | 'journal' | 'settings' | 'map' | 'inventory' | 'mount' | 'abilities' | 'botany' | 'spells' | 'items' | 'equipment' | 'curses' | 'diseases' | 'recipes' | 'glossary' | 'feats'>('sheet');
 
@@ -33,6 +41,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   const [showItemManager, setShowItemManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [feed, setFeed] = useState<{id: string, message: string}[]>([]);
+  const [settings, setSettings] = useState<{ strictSpells: boolean }>({ strictSpells: true });
 
   // Inventory UI State
   const [showExtraPlanar, setShowExtraPlanar] = useState(false);
@@ -74,10 +83,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<Record<number, string[]>>({});
   const [characterProfiles, setCharacterProfiles] = useState<CharacterProfile[]>([]);
-  const [activeCharId, setActiveCharId] = useState<string | null>(null);
-  
-  const [localTheme, setLocalTheme] = useState(localStorage.getItem('frogs_theme') || 'mycelium');
-  
+  const [activeCharId, setActiveCharId] = useState<string | null>(initialCharacterId || null);
 
   const [baseStats, setBaseStats] = useState<Record<string, any>>({});
 
@@ -95,9 +101,18 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   const [bloodMoon, setBloodMoon] = useState(false);
   const [showBloodMoonBanner, setShowBloodMoonBanner] = useState<string | null>(null);
 
+  const { unlockedFeatures, computedStats } = useClassFeatures(activeCharacter?.charClass, activeCharacter?.level, baseStats);
+
   useEffect(() => {
     store.setRole(role || 'player');
   }, [role, store]);
+
+  // Vault -> Game Pipeline (Inject initial data on load)
+  useEffect(() => {
+    if (initialCharacterData && initialCharacterId) {
+      store.importVaultCharacter(initialCharacterData);
+    }
+  }, [initialCharacterData, initialCharacterId, store]);
 
   // Silently trigger auto-seed pipeline on startup
   useEffect(() => {
@@ -115,17 +130,12 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
   }, []);
 
   useEffect(() => {
-    const isLobby = role === null || (role === 'player' && !activeCharId);
-    if (isLobby) {
-      document.body.className = 'theme-classic-dark';
-    } else if (bloodMoon) {
+    if (bloodMoon) {
       document.body.className = 'theme-blood-moon';
     } else {
-      document.body.className = `theme-${localTheme}`;
-      localStorage.setItem('frogs_theme', localTheme);
+      document.body.className = '';
     }
-  }, [role, activeCharId, localTheme, bloodMoon]);
-
+  }, [bloodMoon]);
   const initialBloodMoonMount = useRef(true);
   useEffect(() => {
     if (initialBloodMoonMount.current) {
@@ -163,6 +173,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
       setCharacterProfiles([...store.getCharacterProfiles()]);
       setRevealedHandouts([...store.getRevealedHandouts()]);
       
+      setSettings(sharedMap.get('settings') || { strictSpells: true });
       const age = store.getActiveGlobalEffect();
       setActiveGlobalEffect(age ? { ...age } : null);
       
@@ -266,15 +277,50 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
         level: charMap.get('level') || 1,
         species: charMap.get('species') || '',
         feats: charMap.get('feats') || [],
-        hp: charMap.get('hp') || { current: 10, max: 10 }
+        hp: charMap.get('hp') || { current: 10, max: 10 },
+        proficiencies: p.proficiencies || []
       });
     };
     
     charMap.observe(updateCharState);
     updateCharState();
     
+    // Reverse Sync: Yjs -> Firebase Vault
+    // If we have an active user, we debounce saving the charMap changes back to Firebase
+    let syncTimeout: any;
+    const syncToFirebase = () => {
+      if (auth.currentUser && activeCharId) {
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(async () => {
+           try {
+              const currentHp = charMap.get('hp') || { current: 10, max: 10 };
+              const currentStats = charMap.get('stats') || {};
+              const currentLevel = charMap.get('level') || 1;
+              const p = (store.getCharacterProfiles() as any).find((c:any) => c.id === activeCharId) || {};
+              
+              await updateDoc(doc(db, `users/${auth.currentUser!.uid}/characters/${activeCharId}`), {
+                 hp: currentHp,
+                 stats: currentStats,
+                 level: currentLevel,
+                 activeCharacter: {
+                    name: charMap.get('name') || p.name || 'Unnamed',
+                    charClass: charMap.get('charClass') || p.charClass || '',
+                    level: currentLevel,
+                    proficiencies: p.proficiencies || []
+                 }
+              });
+           } catch (e) {
+              console.error("Failed to reverse sync character to Vault", e);
+           }
+        }, 2000); // 2 second debounce
+      }
+    };
+    charMap.observe(syncToFirebase);
+    
     return () => {
       charMap.unobserve(updateCharState);
+      charMap.unobserve(syncToFirebase);
+      if (syncTimeout) clearTimeout(syncTimeout);
     };
   }, [store, activeCharId]);
 
@@ -529,22 +575,33 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
               const activeProfile = (Array.isArray(characterProfiles) ? characterProfiles : []).find(c => c.id === activeCharId) as any || {};
               const mergedCharacter = activeCharacter ? { ...activeCharacter, proficiencies: activeProfile.proficiencies || [] } : activeProfile;
               return (
-                <TraditionalSheet
+                <TraditionalSheet 
                   activeCharacter={mergedCharacter}
                   hp={{ current: activeCharacter?.hp?.current ?? 10, max: activeCharacter?.hp?.max ?? 10, temp: activeCharacter?.hp?.temp ?? 0 }}
-                  stats={baseStats}
+                  baseStats={baseStats}
+                  overrideStats={baseStats as any}
+                  computedStats={computedStats}
+                  features={unlockedFeatures}
                   equipment={Object.values(equipment).filter(Boolean) as any}
-                  features={mergedCharacter.features || []}
-              onNavigate={(tab) => {
-                if (tab === 'Overview') {
-                  setActiveTab(null as any);
-                } else {
-                  setActiveTab(tab.toLowerCase() as any);
-                }
-              }}
-              onUpdateStat={(stat, value) => {
-                if (activeCharId) store.updateCharacterStat(activeCharId, stat, value);
-              }}
+                  onNavigate={(tab) => {
+                    if (tab === 'Overview') {
+                      setActiveTab(null as any);
+                    } else {
+                      setActiveTab(tab.toLowerCase() as any);
+                    }
+                  }}
+                  onUpdateStat={(stat, value) => {
+                    if (activeCharId) {
+                       const map = store.getCharacterMap(activeCharId);
+                       const currentStats = map.get('stats') || {};
+                       if (value === null) {
+                           delete currentStats[stat];
+                           map.set('stats', { ...currentStats });
+                       } else {
+                           map.set('stats', { ...currentStats, [stat]: value });
+                       }
+                    }
+                  }}
               onUpdateHp={(current, max, temp) => {
                 if (activeCharId) store.updateCharacterHp(activeCharId, current, max, temp);
               }}
@@ -874,74 +931,8 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
                 <h2 style={{ margin: 0 }}>Visual Settings</h2>
               </div>
               <div>
-                <div className="sub-label">Select Local Theme</div>
-                <div className="text-xs text-muted-foreground mb-3">This only affects your personal screen.</div>
-                <div className="flex flex-col gap-4">
-                  <button 
-                    onClick={() => setLocalTheme('high-noon')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'high-noon' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(210, 180, 140, 0.9) 0%, rgba(180, 150, 110, 0.95) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1 tracking-wider" style={{ color: '#5C4033', textShadow: '1px 1px 0 rgba(245,230,204,0.5)' }}>High Noon Scorch</div>
-                    <div className="text-xs" style={{ color: '#5C4033' }}>Bleached bone backgrounds, eroded umber borders, drifting sand, and glowing burnt copper.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('arctic')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'arctic' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(28, 35, 43, 0.9) 0%, rgba(16, 20, 25, 0.95) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1 uppercase tracking-wider" style={{ color: '#F0F8FF' }}>Arctic Permafrost</div>
-                    <div className="text-xs" style={{ color: '#8c9ea8' }}>Harsh survival slate, creeping jagged frost, and deep aurora green/violet glows.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('eldritch')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'eldritch' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(26, 15, 46, 0.9) 0%, rgba(13, 6, 20, 0.95) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1" style={{ color: '#00F5FF' }}>Abyssal Eldritch</div>
-                    <div className="text-xs" style={{ color: '#6b8c96' }}>Deep oceanic purples, glowing tentacles, and pulsing bioluminescent biolife.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('volcanic')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'volcanic' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(145deg, rgba(20, 10, 8, 0.95) 0%, rgba(10, 3, 2, 0.98) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1" style={{ color: '#f97316' }}>Volcanic Ash</div>
-                    <div className="text-xs" style={{ color: '#9a6851' }}>Abyssal black backgrounds, smoldering rough charcoal panels, and pulsing magma cracks.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('enchanted-forest')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'enchanted-forest' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(6, 15, 10, 0.9) 0%, rgba(2, 10, 6, 0.95) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1" style={{ color: '#ec4899' }}>Enchanted Forest</div>
-                    <div className="text-xs" style={{ color: '#5c8570' }}>Deep woods woven with thorny vines, vibrant floral pinks, golden sunlight, and glowing fae butterflies.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('mycelium')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'mycelium' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(10, 15, 20, 0.8) 0%, rgba(5, 8, 12, 0.9) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1" style={{ color: '#00ff9d' }}>Mycelium</div>
-                    <div className="text-xs" style={{ color: '#6b8583' }}>Deep underground, bioluminescent fungal decay. Highly organic buttons and hollowed-out containers.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('classic-dark')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'classic-dark' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(18, 18, 22, 0.8) 0%, rgba(12, 12, 18, 0.9) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1" style={{ color: '#e11d48' }}>Classic Dark</div>
-                    <div className="text-xs" style={{ color: '#6b6b7b' }}>The original dark glass UI with crimson accents and clean geometric lines.</div>
-                  </button>
-                  <button 
-                    onClick={() => setLocalTheme('classic-light')}
-                    className={`text-left p-4 rounded-lg border-2 transition-all ${localTheme === 'classic-light' ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[0_0_15px_var(--accent-glow)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}
-                    style={{ background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 245, 0.9) 100%)' }}
-                  >
-                    <div className="font-heading font-bold text-lg mb-1" style={{ color: '#b91c1c' }}>Classic Light</div>
-                    <div className="text-xs" style={{ color: '#52525b' }}>A bright, parchment-like UI perfect for well-lit rooms or players who prefer dark text.</div>
-                  </button>
-                </div>
+                <div className="sub-label">Theme</div>
+                <div className="text-xs text-muted-foreground mb-3">Grimdark global theme is now applied to all screens. Local themes are disabled.</div>
               </div>
             </div>
           )}
@@ -988,6 +979,8 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
               onAddCurrency={(def) => store.addCurrencyDef(def)}
               onRemoveCurrency={(id) => store.removeCurrencyDef(id)}
               databaseControls={<CsvImporter />}
+              settings={settings}
+              onUpdateSettings={(updates) => store.updateSettings(updates)}
               onClose={() => setShowSettings(false)}
             />
           )}
@@ -1128,7 +1121,7 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
           </div>
         )}
         {activeTab === 'spells' && (
-          <SpellsCompendium role={role} />
+          <SpellsCompendium role={role} settings={settings} />
         )}
         {activeTab === 'items' && (
           <MagicItemsCompendium role={role} store={store} activeCharId={activeCharId} characterProfiles={characterProfiles} />
@@ -1196,6 +1189,27 @@ export function GameApp({ store, initialRole, campaignId }: { store: CampaignSto
             </div>
           </div>
         )}
+
+      {role === 'player' && (
+      <div className="fixed bottom-0 left-0 right-0 bg-stone-950 border-t-2 border-yellow-700/50 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 flex justify-around items-center z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
+        <button onClick={() => setActiveTab(null as any)} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${!activeTab ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+          <User size={20} />
+          <span className="text-[10px] uppercase font-bold tracking-widest">Overview</span>
+        </button>
+        <button onClick={() => setActiveTab('sheet')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'sheet' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+          <Scroll size={24} />
+          <span className="text-[10px] uppercase font-bold tracking-widest">Sheet</span>
+        </button>
+        <button onClick={() => setActiveTab('spells')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'spells' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+          <Wand2 size={20} />
+          <span className="text-[10px] uppercase font-bold tracking-widest">Spells</span>
+        </button>
+        <button onClick={() => setActiveTab('journal')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'journal' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+          <BookOpen size={20} />
+          <span className="text-[10px] uppercase font-bold tracking-widest">Journal</span>
+        </button>
+      </div>
+      )}
     </ThemeProvider>
   );
 }
@@ -1206,26 +1220,31 @@ export default function App() {
   const [role, setRole] = useState<'dm' | 'player'>('player');
   const [store, setStore] = useState<CampaignStore | null>(null);
 
-  const initCampaign = (id: string, r: 'dm' | 'player') => {
+  const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
+  const [selectedCharData, setSelectedCharData] = useState<any>(null);
+
+  const initCampaign = (id: string, r: 'dm' | 'player', char?: any) => {
     if (store) store.destroy();
     const s = new CampaignStore(`frogs-world-db-${id}`);
     s.setRole(r);
     setStore(s);
     setRole(r);
     setCampaignId(id);
+    setSelectedCharId(char?.id || null);
+    setSelectedCharData(char || null);
     setAppState('game');
   };
 
   if (appState === 'landing') {
     return (
-      <Landing 
+      <Vault 
         onHost={(id) => initCampaign(id, 'dm')} 
-        onJoin={(id) => initCampaign(id, 'player')} 
+        onJoin={(id, char) => initCampaign(id, 'player', char)} 
       />
     );
   }
 
   if (!store || !campaignId) return null;
 
-  return <GameApp key={campaignId} store={store} initialRole={role} campaignId={campaignId} />;
+  return <GameApp key={campaignId} store={store} initialRole={role} campaignId={campaignId} initialCharacterId={selectedCharId || undefined} initialCharacterData={selectedCharData} />;
 }

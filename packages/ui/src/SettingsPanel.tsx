@@ -12,11 +12,13 @@ interface SettingsPanelProps {
   onAddCurrency: (def: CurrencyDef) => void;
   onRemoveCurrency: (id: string) => void;
   databaseControls?: any;
+  settings: { strictSpells: boolean };
+  onUpdateSettings: (updates: Partial<{ strictSpells: boolean }>) => void;
   onClose: () => void;
 }
 
-export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, databaseControls, onClose }: SettingsPanelProps) {
-  const [tab, setTab] = useState<'currencies' | 'schema' | 'database'>('currencies');
+export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, databaseControls, settings, onUpdateSettings, onClose }: SettingsPanelProps) {
+  const [tab, setTab] = useState<'currencies' | 'schema' | 'database' | 'rules'>('currencies');
   const [newCurrencyName, setNewCurrencyName] = useState('');
   const [newCurrencyAbbr, setNewCurrencyAbbr] = useState('');
 
@@ -55,6 +57,12 @@ export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, dat
             onClick={() => setTab('schema')}
           >
             Stat Schema
+          </button>
+          <button 
+            className={`tab-pill ${tab === 'rules' ? 'tab-pill-active' : ''}`}
+            onClick={() => setTab('rules')}
+          >
+            Rules
           </button>
           <button 
             className={`tab-pill ${tab === 'database' ? 'tab-pill-active' : ''}`}
@@ -109,6 +117,27 @@ export function SettingsPanel({ currencies, onAddCurrency, onRemoveCurrency, dat
           {tab === 'schema' && (
             <div className="text-center py-8 text-muted-foreground italic text-sm">
               Stat Schema editing is currently handled in the main view.
+            </div>
+          )}
+
+          {tab === 'rules' && (
+            <div className="flex flex-col gap-4">
+               <div className="text-sm text-muted-foreground mb-4">
+                 Configure campaign rules and strictness.
+               </div>
+               
+               <div className="flex items-center justify-between bg-black/40 border border-[var(--border)] p-4 rounded-lg">
+                 <div>
+                   <div className="font-bold text-secondary">Strict Spells</div>
+                   <div className="text-xs text-muted-foreground mt-1">If enabled, players can only add spells that exist in the compendium. If disabled, they can create custom spells on the fly.</div>
+                 </div>
+                 <button 
+                   onClick={() => onUpdateSettings({ strictSpells: !settings.strictSpells })}
+                   className={`w-12 h-6 rounded-full flex items-center p-1 transition-colors ${settings.strictSpells ? 'bg-success' : 'bg-stone-700'}`}
+                 >
+                   <div className={`w-4 h-4 rounded-full bg-white transition-transform ${settings.strictSpells ? 'translate-x-6' : 'translate-x-0'}`} />
+                 </button>
+               </div>
             </div>
           )}
           

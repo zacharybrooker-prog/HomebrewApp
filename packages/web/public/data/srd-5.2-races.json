@@ -1,0 +1,110 @@
+[
+  {
+    "name": "Dragonborn",
+    "speed": 30,
+    "size": "Medium",
+    "abilityScoreBonuses": { "STR": 2, "CHA": 1 },
+    "languages": ["Common", "Draconic"],
+    "racialTraits": [
+      { "name": "Draconic Ancestry", "description": "You have draconic ancestry. Choose one type of dragon from the Draconic Ancestry table. Your breath weapon and damage resistance are determined by the dragon type." },
+      { "name": "Breath Weapon", "description": "You can use your action to exhale destructive energy." },
+      { "name": "Damage Resistance", "description": "You have resistance to the damage type associated with your draconic ancestry." }
+    ]
+  },
+  {
+    "name": "Dwarf",
+    "speed": 25,
+    "size": "Medium",
+    "abilityScoreBonuses": { "CON": 2 },
+    "languages": ["Common", "Dwarvish"],
+    "racialTraits": [
+      { "name": "Darkvision", "description": "Accustomed to life underground, you have superior vision in dark and dim conditions." },
+      { "name": "Dwarven Resilience", "description": "You have advantage on saving throws against poison, and you have resistance against poison damage." },
+      { "name": "Dwarven Combat Training", "description": "You have proficiency with the battleaxe, handaxe, light hammer, and warhammer." },
+      { "name": "Tool Proficiency", "description": "You gain proficiency with the artisan’s tools of your choice: smith’s tools, brewer’s supplies, or mason’s tools." }
+    ]
+  },
+  {
+    "name": "Elf",
+    "speed": 30,
+    "size": "Medium",
+    "abilityScoreBonuses": { "DEX": 2 },
+    "languages": ["Common", "Elvish"],
+    "racialTraits": [
+      { "name": "Darkvision", "description": "Accustomed to twilit forests and the night sky, you have superior vision in dark and dim conditions." },
+      { "name": "Keen Senses", "description": "You have proficiency in the Perception skill." },
+      { "name": "Fey Ancestry", "description": "You have advantage on saving throws against being charmed, and magic can’t put you to sleep." },
+      { "name": "Trance", "description": "Elves don’t need to sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day." }
+    ]
+  },
+  {
+    "name": "Gnome",
+    "speed": 25,
+    "size": "Small",
+    "abilityScoreBonuses": { "INT": 2 },
+    "languages": ["Common", "Gnomish"],
+    "racialTraits": [
+      { "name": "Darkvision", "description": "Accustomed to life underground, you have superior vision in dark and dim conditions." },
+      { "name": "Gnome Cunning", "description": "You have advantage on all Intelligence, Wisdom, and Charisma saving throws against magic." }
+    ]
+  },
+  {
+    "name": "Half-Elf",
+    "speed": 30,
+    "size": "Medium",
+    "abilityScoreBonuses": { "CHA": 2, "CHOICE_1": 1, "CHOICE_2": 1 },
+    "languages": ["Common", "Elvish"],
+    "racialTraits": [
+      { "name": "Darkvision", "description": "Thanks to your elf heritage, you have superior vision in dark and dim conditions." },
+      { "name": "Fey Ancestry", "description": "You have advantage on saving throws against being charmed, and magic can’t put you to sleep." },
+      { "name": "Skill Versatility", "description": "You gain proficiency in two skills of your choice." }
+    ]
+  },
+  {
+    "name": "Half-Orc",
+    "speed": 30,
+    "size": "Medium",
+    "abilityScoreBonuses": { "STR": 2, "CON": 1 },
+    "languages": ["Common", "Orc"],
+    "racialTraits": [
+      { "name": "Darkvision", "description": "Thanks to your orc blood, you have superior vision in dark and dim conditions." },
+      { "name": "Menacing", "description": "You gain proficiency in the Intimidation skill." },
+      { "name": "Relentless Endurance", "description": "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead." },
+      { "name": "Savage Attacks", "description": "When you score a critical hit with a melee weapon attack, you can roll one of the weapon’s damage dice one additional time and add it to the extra damage of the critical hit." }
+    ]
+  },
+  {
+    "name": "Halfling",
+    "speed": 25,
+    "size": "Small",
+    "abilityScoreBonuses": { "DEX": 2 },
+    "languages": ["Common", "Halfling"],
+    "racialTraits": [
+      { "name": "Lucky", "description": "When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new roll." },
+      { "name": "Brave", "description": "You have advantage on saving throws against being frightened." },
+      { "name": "Halfling Nimbleness", "description": "You can move through the space of any creature that is of a size larger than yours." }
+    ]
+  },
+  {
+    "name": "Human",
+    "speed": 30,
+    "size": "Medium",
+    "abilityScoreBonuses": { "STR": 1, "DEX": 1, "CON": 1, "INT": 1, "WIS": 1, "CHA": 1 },
+    "languages": ["Common"],
+    "racialTraits": [
+      { "name": "Extra Language", "description": "You can speak, read, and write one extra language of your choice." }
+    ]
+  },
+  {
+    "name": "Tiefling",
+    "speed": 30,
+    "size": "Medium",
+    "abilityScoreBonuses": { "INT": 1, "CHA": 2 },
+    "languages": ["Common", "Infernal"],
+    "racialTraits": [
+      { "name": "Darkvision", "description": "Thanks to your infernal heritage, you have superior vision in dark and dim conditions." },
+      { "name": "Hellish Resistance", "description": "You have resistance to fire damage." },
+      { "name": "Infernal Legacy", "description": "You know the thaumaturgy cantrip. When you reach 3rd level, you can cast the hellish rebuke spell as a 2nd-level spell once with this trait and regain the ability to do so when you finish a long rest. When you reach 5th level, you can cast the darkness spell once with this trait and regain the ability to do so when you finish a long rest. Charisma is your spellcasting ability for these spells." }
+    ]
+  }
+]

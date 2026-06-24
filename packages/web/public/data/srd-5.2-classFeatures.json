@@ -1,20 +1,228 @@
 [
   {
+    "id": "barbarian-rage",
+    "className": "Barbarian",
+    "level": 1,
+    "name": "Rage",
+    "description": "In battle, you fight with primal ferocity. On your turn, you can enter a rage as a bonus action.",
+    "type": "resource",
+    "resource": {
+      "max": 2,
+      "recharge": "long",
+      "current": 2
+    }
+  },
+  {
+    "id": "barbarian-unarmored-defense",
+    "className": "Barbarian",
+    "level": 1,
+    "name": "Unarmored Defense",
+    "description": "While you are not wearing any armor, your Armor Class equals 10 + your Dexterity modifier + your Constitution modifier. You can use a shield and still gain this benefit.",
+    "type": "passive",
+    "modifiers": {
+      "ac_calc": "10+dex+con"
+    }
+  },
+  {
+    "id": "barbarian-reckless-attack",
+    "className": "Barbarian",
+    "level": 2,
+    "name": "Reckless Attack",
+    "description": "Starting at 2nd level, you can throw aside all concern for defense to attack with fierce desperation. When you make your first attack on your turn, you can decide to attack recklessly. Doing so gives you advantage on melee weapon attack rolls using Strength during this turn, but attack rolls against you have advantage until your next turn.",
+    "type": "active"
+  },
+  {
+    "id": "barbarian-danger-sense",
+    "className": "Barbarian",
+    "level": 2,
+    "name": "Danger Sense",
+    "description": "At 2nd level, you gain an uncanny sense of when things nearby aren't as they should be, giving you an edge when you dodge away from danger. You have advantage on Dexterity saving throws against effects that you can see, such as traps and spells. To gain this benefit, you can't be blinded, deafened, or incapacitated.",
+    "type": "passive"
+  },
+  {
+    "id": "barbarian-primal-path",
+    "className": "Barbarian",
+    "level": 3,
+    "name": "Primal Path",
+    "description": "At 3rd level, you choose a path that shapes the nature of your rage. Your choice grants you features at 3rd level and again at 6th, 10th, and 14th levels.",
+    "type": "choice"
+  },
+  {
+    "id": "barbarian-asi-4",
+    "className": "Barbarian",
+    "level": 4,
+    "name": "Ability Score Improvement",
+    "description": "When you reach 4th level, and again at 8th, 12th, 16th, and 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1.",
+    "type": "choice"
+  },
+  {
+    "id": "barbarian-extra-attack",
+    "className": "Barbarian",
+    "level": 5,
+    "name": "Extra Attack",
+    "description": "Beginning at 5th level, you can attack twice, instead of once, whenever you take the Attack action on your turn.",
+    "type": "passive"
+  },
+  {
+    "id": "barbarian-fast-movement",
+    "className": "Barbarian",
+    "level": 5,
+    "name": "Fast Movement",
+    "description": "Starting at 5th level, your speed increases by 10 feet while you aren't wearing heavy armor.",
+    "type": "passive",
+    "modifiers": {
+      "speed_bonus": 10
+    }
+  },
+  {
+    "id": "fighter-fighting-style",
+    "className": "Fighter",
+    "level": 1,
+    "name": "Fighting Style",
+    "description": "You adopt a particular style of fighting as your specialty. Choose one of the following options. You can't take a Fighting Style option more than once, even if you later get to choose again.",
+    "type": "choice"
+  },
+  {
+    "id": "fighter-second-wind",
+    "className": "Fighter",
+    "level": 1,
     "name": "Second Wind",
-    "className": "Fighter",
-    "levelRequired": 1,
-    "description": "You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to 1d10 + your fighter level. Once you use this feature, you must finish a short or long rest before you can use it again."
+    "description": "You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to 1d10 + your fighter level.",
+    "type": "resource",
+    "resource": {
+      "max": 1,
+      "recharge": "short",
+      "current": 1
+    }
   },
   {
+    "id": "fighter-action-surge",
+    "className": "Fighter",
+    "level": 2,
     "name": "Action Surge",
-    "className": "Fighter",
-    "levelRequired": 2,
-    "description": "Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action on top of your regular action and a possible bonus action."
+    "description": "Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action.",
+    "type": "resource",
+    "resource": {
+      "max": 1,
+      "recharge": "short",
+      "current": 1
+    }
   },
   {
-    "name": "Sneak Attack",
+    "id": "fighter-martial-archetype",
+    "className": "Fighter",
+    "level": 3,
+    "name": "Martial Archetype",
+    "description": "At 3rd level, you choose an archetype that you strive to emulate in your combat styles and techniques.",
+    "type": "choice"
+  },
+  {
+    "id": "fighter-asi-4",
+    "className": "Fighter",
+    "level": 4,
+    "name": "Ability Score Improvement",
+    "description": "When you reach 4th level, and again at 6th, 8th, 12th, 14th, 16th, and 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1.",
+    "type": "choice"
+  },
+  {
+    "id": "fighter-extra-attack",
+    "className": "Fighter",
+    "level": 5,
+    "name": "Extra Attack",
+    "description": "Beginning at 5th level, you can attack twice, instead of once, whenever you take the Attack action on your turn.",
+    "type": "passive"
+  },
+  {
+    "id": "rogue-expertise-1",
     "className": "Rogue",
-    "levelRequired": 1,
-    "description": "Beginning at 1st level, you know how to strike subtly and exploit a foe's distraction. Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack if you have advantage on the attack roll."
+    "level": 1,
+    "name": "Expertise",
+    "description": "At 1st level, choose two of your skill proficiencies, or one of your skill proficiencies and your proficiency with thieves' tools. Your proficiency bonus is doubled for any ability check you make that uses either of the chosen proficiencies.",
+    "type": "choice"
+  },
+  {
+    "id": "rogue-sneak-attack",
+    "className": "Rogue",
+    "level": 1,
+    "name": "Sneak Attack",
+    "description": "Beginning at 1st level, you know how to strike subtly and exploit a foe's distraction. Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack if you have advantage on the attack roll. The attack must use a finesse or a ranged weapon.",
+    "type": "passive"
+  },
+  {
+    "id": "rogue-thieves-cant",
+    "className": "Rogue",
+    "level": 1,
+    "name": "Thieves' Cant",
+    "description": "During your rogue training you learned thieves' cant, a secret mix of dialect, jargon, and code that allows you to hide messages in seemingly normal conversation.",
+    "type": "passive"
+  },
+  {
+    "id": "rogue-cunning-action",
+    "className": "Rogue",
+    "level": 2,
+    "name": "Cunning Action",
+    "description": "Starting at 2nd level, your quick thinking and agility allow you to move and act quickly. You can take a bonus action on each of your turns in combat. This action can be used only to take the Dash, Disengage, or Hide action.",
+    "type": "active"
+  },
+  {
+    "id": "rogue-roguish-archetype",
+    "className": "Rogue",
+    "level": 3,
+    "name": "Roguish Archetype",
+    "description": "At 3rd level, you choose an archetype that you emulate in the exercise of your rogue abilities.",
+    "type": "choice"
+  },
+  {
+    "id": "rogue-asi-4",
+    "className": "Rogue",
+    "level": 4,
+    "name": "Ability Score Improvement",
+    "description": "When you reach 4th level, and again at 8th, 10th, 12th, 16th, and 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1.",
+    "type": "choice"
+  },
+  {
+    "id": "rogue-uncanny-dodge",
+    "className": "Rogue",
+    "level": 5,
+    "name": "Uncanny Dodge",
+    "description": "Starting at 5th level, when an attacker that you can see hits you with an attack, you can use your reaction to halve the attack's damage against you.",
+    "type": "active"
+  },
+  {
+    "id": "wizard-spellcasting",
+    "className": "Wizard",
+    "level": 1,
+    "name": "Spellcasting",
+    "description": "As a student of arcane magic, you have a spellbook containing cantrips and spells that show the first glimmerings of your true power.",
+    "type": "active"
+  },
+  {
+    "id": "wizard-arcane-recovery",
+    "className": "Wizard",
+    "level": 1,
+    "name": "Arcane Recovery",
+    "description": "You have learned to regain some of your magical energy by studying your spellbook. Once per day when you finish a short rest, you can choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your wizard level (rounded up).",
+    "type": "resource",
+    "resource": {
+      "max": 1,
+      "recharge": "long",
+      "current": 1
+    }
+  },
+  {
+    "id": "wizard-arcane-tradition",
+    "className": "Wizard",
+    "level": 2,
+    "name": "Arcane Tradition",
+    "description": "When you reach 2nd level, you choose an arcane tradition, shaping your practice of magic through one of eight schools.",
+    "type": "choice"
+  },
+  {
+    "id": "wizard-asi-4",
+    "className": "Wizard",
+    "level": 4,
+    "name": "Ability Score Improvement",
+    "description": "When you reach 4th level, and again at 8th, 12th, 16th, and 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1.",
+    "type": "choice"
   }
 ]

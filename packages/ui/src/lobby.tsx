@@ -35,7 +35,7 @@ export function Lobby({ characters, onSelectCharacter, onCreateCharacter, onDele
     return (
       <div className="flex flex-col gap-6 animate-fade-in-up w-full max-w-md mx-auto">
         <div className="text-center">
-          <h2 className="font-heading text-3xl text-secondary" style={{ textShadow: '0 0 15px var(--secondary-glow)' }}>
+          <h2 className="font-heading text-3xl" style={{ color: '#b91c1c', textShadow: '0 0 20px rgba(185, 28, 28, 0.6), 0 2px 4px rgba(0,0,0,0.8)' }}>
             Forge Your Hero
           </h2>
         </div>
@@ -77,10 +77,10 @@ export function Lobby({ characters, onSelectCharacter, onCreateCharacter, onDele
   return (
     <div className="flex flex-col gap-8 animate-fade-in-up w-full max-w-md mx-auto mt-8">
       <div className="text-center">
-        <h1 className="font-heading text-4xl mb-2 text-accent" style={{ textShadow: '0 0 20px var(--accent-glow)' }}>
+        <h1 className="font-heading text-4xl mb-2" style={{ color: '#b91c1c', textShadow: '0 0 20px rgba(185, 28, 28, 0.6), 0 2px 4px rgba(0,0,0,0.8)' }}>
           Frog's World
         </h1>
-        <p className="text-muted-foreground text-sm tracking-widest uppercase font-heading">
+        <p className="text-stone-400 text-sm tracking-[0.2em] uppercase font-heading font-bold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
           Select Your Path
         </p>
       </div>
@@ -97,19 +97,19 @@ export function Lobby({ characters, onSelectCharacter, onCreateCharacter, onDele
         ) : (
           <div className="flex flex-col gap-2">
             {characters.map(p => (
-              <div key={p.id} className="flex gap-2">
+              <div key={p.id} className="flex gap-2 mb-2">
                 <button 
-                  className="flex-1 bg-black/40 hover:bg-black/60 border border-border hover:border-accent p-3 rounded-lg text-left transition-all group flex justify-between items-center"
+                  className="tome-card flex-1 p-4 text-left group flex justify-between items-center"
                   onClick={() => onSelectCharacter(p.id)}
                 >
-                  <div>
-                    <div className="font-bold text-text group-hover:text-accent transition-colors">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">{p.charClass}</div>
+                  <div className="ml-4">
+                    <div className="font-heading font-bold text-lg text-yellow-600/90 group-hover:text-yellow-500 transition-colors tracking-wide" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8), 0 0 5px rgba(202, 138, 4, 0.4)' }}>{p.name}</div>
+                    <div className="text-xs text-yellow-700/60 uppercase tracking-widest font-bold mt-1">{p.charClass}</div>
                   </div>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-accent">➔</span>
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-yellow-600 mr-2" style={{ textShadow: '0 0 10px rgba(202, 138, 4, 0.5)' }}>⤅</span>
                 </button>
                 <button 
-                  className="p-3 bg-black/40 border border-border hover:border-danger hover:bg-danger/20 text-danger rounded-lg transition-all"
+                  className="p-3 bg-[#18181b] border-2 border-[#3f3f46] hover:border-[#b91c1c] hover:bg-[#450a0a] text-[#ef4444] rounded-lg transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.8),_0_4px_6px_rgba(0,0,0,0.8)]"
                   onClick={() => {
                     const confirmation = window.prompt(`Type the character's name "${p.name}" to confirm deletion:`);
                     if (confirmation === p.name) {

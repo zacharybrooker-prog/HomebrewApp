@@ -80,7 +80,7 @@ export const seedSRDSpells = async () => {
 };
 
 // ====== COMPONENT ======
-export function SpellsCompendium({ role }: { role: 'dm' | 'player' | null }) {
+export function SpellsCompendium({ role, settings }: { role: 'dm' | 'player' | null, settings?: { strictSpells?: boolean } }) {
   const [spells, setSpells] = useState<Spell[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('all');
@@ -186,9 +186,11 @@ export function SpellsCompendium({ role }: { role: 'dm' | 'player' | null }) {
           </select>
         </div>
         
-        <button onClick={() => setShowCreator(true)} className="btn-fantasy whitespace-nowrap">
-          + Add Custom Spell
-        </button>
+        {(!settings?.strictSpells || role === 'dm') && (
+          <button onClick={() => setShowCreator(true)} className="btn-fantasy whitespace-nowrap">
+            + Add Custom Spell
+          </button>
+        )}
       </div>
 
       {/* LIST RENDERING */}

@@ -1,11 +1,7 @@
 import { useState } from 'react';
-import { Shield as ShieldIcon, User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, Plus, Minus } from 'lucide-react';
+import { Shield as ShieldIcon, Plus, Minus } from 'lucide-react';
 
 const Shield = ShieldIcon as any;
-const User = UserIcon as any;
-const Scroll = ScrollIcon as any;
-const Wand2 = Wand2Icon as any;
-const BookOpen = BookOpenIcon as any;
 const PlusIcon = Plus as any;
 const MinusIcon = Minus as any;
 
@@ -16,13 +12,15 @@ export interface TraditionalSheetProps {
     max: number;
     temp: number;
   };
-  stats: Record<string, number>;
+  baseStats: Record<string, number>;
+  computedStats?: Record<string, number>;
+  overrideStats?: Record<string, number | null>;
   equipment?: Array<{ id?: string; name: string; description?: string }>;
-  features?: Array<{ id?: string; name: string; description?: string }>;
-  onNavigate: (tab: string) => void;
-  onUpdateStat?: (stat: string, value: number) => void;
+  features?: Array<{ id?: string; name: string; description?: string; resource?: any; type?: string }>;
+  onNavigate?: (tab: string) => void;
+  onUpdateStat?: (stat: string, value: number | null) => void;
   onUpdateHp?: (current: number, max: number, temp: number) => void;
-  onToggleProficiency?: (skillOrSave: string) => void;
+  onToggleProficiency?: (skill: string) => void;
   onAddItem?: () => void;
 }
 
@@ -38,12 +36,18 @@ const SKILL_MAP: Record<string, string> = {
 const STAT_NAMES = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
 
 export function TraditionalSheet({ 
-  activeCharacter, hp, stats, equipment = [], features = [], 
-  onNavigate, onUpdateStat, onUpdateHp, onToggleProficiency, onAddItem 
+  activeCharacter, hp, baseStats, computedStats = {}, overrideStats = {}, equipment = [], features = [], 
+  onUpdateStat, onUpdateHp, onToggleProficiency, onAddItem 
 }: TraditionalSheetProps) {
 
   const [editingStat, setEditingStat] = useState<string | null>(null);
   const [editingHp, setEditingHp] = useState(false);
+
+  const getResolvedStat = (statKey: string, fallback: number) => {
+    if (overrideStats[statKey] != null) return overrideStats[statKey] as number;
+    if (computedStats[statKey] != null) return computedStats[statKey];
+    return fallback;
+  };
 
   const getMod = (score: number) => Math.floor((score - 10) / 2);
   const formatMod = (mod: number) => mod >= 0 ? `+${mod}` : `${mod}`;
@@ -58,14 +62,15 @@ export function TraditionalSheet({
 
   const getSkillTotal = (skillName: string) => {
     const statKey = SKILL_MAP[skillName];
-    const baseStat = stats[statKey] ?? 10;
-    const mod = getMod(baseStat);
+    const statValue = getResolvedStat(statKey, baseStats[statKey] ?? 10);
+    const mod = getMod(statValue);
     return mod + (isProficient(skillName) ? profBonus : 0) + (isProficient(skillName + '_expertise') ? profBonus : 0);
   };
 
   const getSaveTotal = (statName: string) => {
-    const baseStat = stats[statName.toLowerCase().slice(0,3)] ?? 10;
-    const mod = getMod(baseStat);
+    const statKey = statName.toLowerCase().slice(0,3);
+    const statValue = getResolvedStat(statKey, baseStats[statKey] ?? 10);
+    const mod = getMod(statValue);
     return mod + (isProficient(statName) ? profBonus : 0);
   };
 
@@ -108,8 +113,8 @@ export function TraditionalSheet({
           {/* Stats Column */}
           <div className="flex flex-col gap-4 w-24">
             {STAT_NAMES.map(stat => {
-              const statKey = stat.toLowerCase().slice(0, 3);
-              const score = stats[statKey] ?? 10;
+              const statKey = stat.toLowerCase().substring(0,3);
+              const score = getResolvedStat(statKey, baseStats[statKey] ?? 10);
               return (
                 <button 
                   key={stat} 
@@ -182,17 +187,23 @@ export function TraditionalSheet({
               <Shield className="absolute inset-0 w-full h-full text-yellow-900 group-hover:text-yellow-800 transition-colors drop-shadow-md" strokeWidth={1} fill="url(#metalGradient)" />
               <div className="z-10 flex flex-col items-center mt-2">
                 <span className="text-xs font-bold text-yellow-600 uppercase tracking-widest">AC</span>
-                <span className="text-3xl font-bold text-stone-100 group-hover:text-yellow-400">{stats['ac'] ?? 10 + getMod(stats['dex'] ?? 10)}</span>
+                <span className="text-3xl font-bold text-stone-100 group-hover:text-yellow-400">
+                   {getResolvedStat('ac', 10 + getMod(getResolvedStat('dex', baseStats['dex'] ?? 10)))}
+                </span>
               </div>
             </button>
 
             <button onClick={() => setEditingStat('init')} className="flex flex-col items-center justify-center w-24 h-24 border-2 rounded-lg shadow-[0_6px_10px_rgba(0,0,0,0.8),inset_0_0_15px_rgba(0,0,0,0.9)] hover:brightness-110 cursor-pointer group" style={{ background: 'linear-gradient(135deg, #1c1917 0%, #0c0a09 100%)', borderColor: '#b45309' }}>
-               <span className="text-4xl font-bold text-yellow-300 drop-shadow-[0_0_10px_#fde047] group-hover:drop-shadow-[0_0_15px_#fef08a] transition-all">{formatMod(stats['init'] ?? getMod(stats['dex'] ?? 10))}</span>
+               <span className="text-4xl font-bold text-yellow-300 drop-shadow-[0_0_10px_#fde047] group-hover:drop-shadow-[0_0_15px_#fef08a] transition-all">
+                  {formatMod(getResolvedStat('init', getMod(getResolvedStat('dex', baseStats['dex'] ?? 10))))}
+               </span>
                <span className="text-[10px] font-bold text-yellow-600 uppercase mt-2 tracking-widest drop-shadow-md">Initiative</span>
             </button>
 
             <button onClick={() => setEditingStat('speed')} className="flex flex-col items-center justify-center w-24 h-24 border-2 rounded-lg shadow-[0_6px_10px_rgba(0,0,0,0.8),inset_0_0_15px_rgba(255,255,255,0.1)] hover:brightness-110 cursor-pointer group" style={{ background: 'linear-gradient(135deg, #57534e 0%, #292524 100%)', borderColor: '#a8a29e' }}>
-               <span className="text-3xl font-bold text-stone-200 drop-shadow-md group-hover:text-white transition-all">{stats['speed'] ?? 30}</span>
+               <span className="text-3xl font-bold text-stone-200 drop-shadow-md group-hover:text-white transition-all">
+                  {getResolvedStat('speed', 30)}
+               </span>
                <span className="text-[10px] font-bold text-stone-400 uppercase mt-1 tracking-widest drop-shadow-md">Speed</span>
             </button>
           </div>
@@ -243,6 +254,29 @@ export function TraditionalSheet({
               </div>
             </div>
           </div>
+
+          {/* Resource Trackers Bar */}
+          {features.filter(f => f.type === 'resource' || f.type === 'active').length > 0 && (
+             <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+               {features.filter(f => f.type === 'resource' || f.type === 'active').map(f => (
+                 <div key={f.id} className="p-3 bg-stone-900 border border-yellow-900/50 rounded-lg shadow-md flex flex-col items-center min-w-[100px]">
+                    <span className="text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2 text-center leading-tight">{f.name}</span>
+                    {f.type === 'resource' && f.resource && (
+                      <div className="flex gap-1">
+                        {Array.from({length: f.resource.max}).map((_, i) => (
+                           <button key={i} className={`w-4 h-4 rounded-full border border-yellow-700 shadow-inner ${i < f.resource!.current ? 'bg-yellow-500 shadow-[0_0_8px_#eab308]' : 'bg-stone-800'}`} />
+                        ))}
+                      </div>
+                    )}
+                    {f.type === 'active' && (
+                      <button className="px-3 py-1 bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-bold uppercase rounded border border-stone-600 transition-colors shadow-sm">
+                        Activate
+                      </button>
+                    )}
+                 </div>
+               ))}
+             </div>
+          )}
 
           {/* Features and Inventory Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -301,33 +335,29 @@ export function TraditionalSheet({
             
             <div className="flex items-center gap-6 mb-8">
               <button 
-                onClick={() => onUpdateStat?.(editingStat, (stats[editingStat] ?? 10) - 1)}
-                className="w-14 h-14 rounded-full bg-stone-800 border border-stone-600 flex items-center justify-center text-2xl font-bold hover:bg-stone-700 hover:border-yellow-600 transition-all text-stone-300 cursor-pointer"
+                onClick={() => onUpdateStat?.(editingStat, getResolvedStat(editingStat, baseStats[editingStat] ?? 10) - 1)}
+                className="w-16 h-16 rounded-full bg-stone-800 hover:bg-stone-700 border border-yellow-700/50 shadow-lg flex items-center justify-center text-yellow-500 transition-colors"
               >
-                <MinusIcon size={24} />
+                <MinusIcon size={32} />
               </button>
-              
-              <div className="w-24 h-24 rounded-lg bg-stone-950 border-2 border-stone-700 flex flex-col items-center justify-center shadow-inner">
-                <span className="text-4xl font-bold text-stone-100">{stats[editingStat] ?? 10}</span>
+              <div className="flex flex-col items-center justify-center w-24">
+                <span className="text-4xl font-bold text-stone-100">{getResolvedStat(editingStat, baseStats[editingStat] ?? 10)}</span>
                 {['str','dex','con','int','wis','cha'].includes(editingStat) && (
-                  <span className="text-sm font-bold text-yellow-600 mt-1">{formatMod(getMod(stats[editingStat] ?? 10))}</span>
+                  <span className="text-sm font-bold text-yellow-600 mt-1">{formatMod(getMod(getResolvedStat(editingStat, baseStats[editingStat] ?? 10)))}</span>
                 )}
               </div>
 
               <button 
-                onClick={() => onUpdateStat?.(editingStat, (stats[editingStat] ?? 10) + 1)}
+                onClick={() => onUpdateStat?.(editingStat, getResolvedStat(editingStat, baseStats[editingStat] ?? 10) + 1)}
                 className="w-14 h-14 rounded-full bg-stone-800 border border-stone-600 flex items-center justify-center text-2xl font-bold hover:bg-stone-700 hover:border-yellow-600 transition-all text-stone-300 cursor-pointer"
               >
                 <PlusIcon size={24} />
               </button>
             </div>
-
-            <button 
-              onClick={() => setEditingStat(null)}
-              className="w-full py-3 bg-stone-800 hover:bg-yellow-800 text-stone-200 font-bold uppercase tracking-widest rounded transition-colors border border-stone-700 cursor-pointer"
-            >
-              Done
-            </button>
+            <div className="flex gap-3 w-full">
+              <button onClick={() => { setEditingStat(null); }} className="flex-1 px-4 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-widest rounded transition-colors text-sm shadow-md border border-stone-700">Close</button>
+              <button onClick={() => { onUpdateStat?.(editingStat, null); setEditingStat(null); }} className="flex-1 px-4 py-3 bg-red-900/30 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-widest rounded transition-colors text-sm shadow-md border border-red-900/50">Restore Auto</button>
+            </div>
           </div>
         </div>
       )}
@@ -390,25 +420,7 @@ export function TraditionalSheet({
         </div>
       )}
 
-      {/* Bottom Nav Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-stone-950 border-t-2 border-yellow-700/50 pb-safe pt-2 flex justify-around items-center z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
-        <button onClick={() => onNavigate('Overview')} className="flex flex-col items-center gap-1 p-2 w-full text-stone-500 hover:text-stone-300 hover:bg-stone-900/50 rounded-lg transition-all">
-          <User size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Overview</span>
-        </button>
-        <button onClick={() => onNavigate('Sheet')} className="flex flex-col items-center gap-1 p-2 w-full text-yellow-500 bg-stone-900/30 rounded-lg transition-all">
-          <Scroll size={24} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Sheet</span>
-        </button>
-        <button onClick={() => onNavigate('Spells')} className="flex flex-col items-center gap-1 p-2 w-full text-stone-500 hover:text-stone-300 hover:bg-stone-900/50 rounded-lg transition-all">
-          <Wand2 size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Spells</span>
-        </button>
-        <button onClick={() => onNavigate('Journal')} className="flex flex-col items-center gap-1 p-2 w-full text-stone-500 hover:text-stone-300 hover:bg-stone-900/50 rounded-lg transition-all">
-          <BookOpen size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Journal</span>
-        </button>
-      </div>
+
 
     </div>
   );
