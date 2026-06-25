@@ -1,6 +1,7 @@
 {
-  "buildCommand": "pnpm dlx turbo run build --filter web",
-  "outputDirectory": "packages/web/dist",
+  "framework": null,
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",

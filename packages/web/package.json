@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@frogs-world/shared": "workspace:^",
-    "@frogs-world/ui": "workspace:^",
+    "@frogs-world/shared": "file:../shared",
+    "@frogs-world/ui": "file:../ui",
     "firebase": "^12.14.0",
     "firebase-admin": "^12.0.0",
     "lucide-react": "^0.370.0",

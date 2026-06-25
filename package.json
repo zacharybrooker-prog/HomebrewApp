@@ -4,12 +4,12 @@
   "private": true,
   "packageManager": "pnpm@9.1.0",
   "scripts": {
-    "build": "turbo run build --filter web",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "build": "cd packages/web && pnpm install --ignore-scripts && pnpm run build && cd ../.. && node build.mjs",
+    "dev": "cd packages/web && pnpm run dev",
+    "lint": "cd packages/web && pnpm run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
+    "test": "cd packages/web && pnpm run test",
+    "typecheck": "cd packages/web && pnpm run typecheck",
     "check-licenses": "node tooling/license-gate.mjs"
   },
   "devDependencies": {
