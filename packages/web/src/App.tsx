@@ -471,7 +471,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
   return (
     <ThemeProvider phaseIndex={currentVisualBlock % 4}>
       {activeTab !== 'sheet' && (
-      <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-lg" style={{ height: '80px', backdropFilter: 'blur(12px)', background: 'rgba(10, 10, 15, 0.90)', borderBottom: '1px solid var(--border-accent)' }}>
+      <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.9)]" style={{ height: '80px', backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderBottom: '4px solid #450a0a' }}>
         {/* Left Zone: Location, Time & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="flex items-center gap-3 shrink-0">
@@ -1191,7 +1191,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
         )}
 
       {role === 'player' && (
-      <div className="fixed bottom-0 left-0 right-0 bg-stone-950 border-t-2 border-yellow-700/50 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 flex justify-around items-center z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
+      <div className="fixed bottom-0 left-0 right-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.95)]" style={{ backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderTop: '4px solid #450a0a' }}>
         <button onClick={() => setActiveTab(null as any)} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${!activeTab ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <User size={20} />
           <span className="text-[10px] uppercase font-bold tracking-widest">Overview</span>

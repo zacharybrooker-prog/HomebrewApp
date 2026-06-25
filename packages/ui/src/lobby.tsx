@@ -75,7 +75,7 @@ export function Lobby({ characters, onSelectCharacter, onCreateCharacter, onDele
   }
 
   return (
-    <div className="flex flex-col gap-8 animate-fade-in-up w-full max-w-md mx-auto mt-8">
+    <div className="flex flex-col gap-8 animate-fade-in-up w-full max-w-md mx-auto mt-16 p-8 rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.95)]" style={{ backgroundImage: 'url(/artifact-parchment-bg.png)', backgroundSize: 'cover', border: '4px solid #450a0a', boxShadow: 'inset 0 0 50px rgba(0,0,0,0.5)' }}>
       <div className="text-center">
         <h1 className="font-heading text-4xl mb-2" style={{ color: '#b91c1c', textShadow: '0 0 20px rgba(185, 28, 28, 0.6), 0 2px 4px rgba(0,0,0,0.8)' }}>
           Frog's World
