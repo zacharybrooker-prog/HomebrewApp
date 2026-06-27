@@ -40,13 +40,13 @@ export function AnalogClock({ timeMs }: { timeMs: number }) {
 
       {/* Hour Hand */}
       <div 
-        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-1 rounded-t-full bg-blue-600 origin-bottom transition-transform duration-1000 ease-in-out z-0"
+        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-1 rounded-t-full bg-blue-600 origin-bottom z-0"
         style={{ height: '30%', transform: `translateX(-50%) rotate(${hourDegrees}deg)` }}
       ></div>
 
       {/* Minute Hand */}
       <div 
-        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-0.5 rounded-t-full bg-blue-500/80 origin-bottom transition-transform duration-1000 ease-in-out z-0"
+        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-0.5 rounded-t-full bg-blue-500/80 origin-bottom z-0"
         style={{ height: '40%', transform: `translateX(-50%) rotate(${minuteDegrees}deg)` }}
       ></div>
     </div>
