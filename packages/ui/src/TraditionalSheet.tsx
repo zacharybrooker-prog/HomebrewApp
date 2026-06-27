@@ -69,6 +69,11 @@ export function TraditionalSheet({
   const [spentHitDice, setSpentHitDice] = useState(0);
   const [activeResources, setActiveResources] = useState<Record<string, boolean>>({});
 
+  // Helper to format timeMs for the digital display under the clock
+  const msInDay = Math.floor(timeMs % (24 * 60 * 60 * 1000));
+  const totalMinutes = Math.floor(msInDay / 60000);
+  const digitalTimeStr = `${Math.floor(totalMinutes / 60).toString().padStart(2, '0')}:${(totalMinutes % 60).toString().padStart(2, '0')}`;
+
   const getResolvedStat = (statKey: string, fallback: number) => {
     if (overrideStats[statKey] != null) return overrideStats[statKey] as number;
     if (computedStats[statKey] != null) return computedStats[statKey];
@@ -360,6 +365,10 @@ export function TraditionalSheet({
                        )}
                     </div>
                  </button>
+                 {/* Digital Time Display to reassure it's syncing with Header */}
+                 <div className="text-center mt-2 font-mono text-blue-400 text-xs font-bold tracking-widest" style={{ textShadow: '0 0 5px rgba(30, 64, 175, 0.5)' }}>
+                    {digitalTimeStr}
+                 </div>
               </div>
             </div>
           </div>

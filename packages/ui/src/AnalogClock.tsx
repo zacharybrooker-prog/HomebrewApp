@@ -1,6 +1,7 @@
 
 
 export function AnalogClock({ timeMs }: { timeMs: number }) {
+  console.log("AnalogClock render. timeMs:", timeMs);
   // Calculate total hours elapsed
   const totalHours = timeMs / (1000 * 60 * 60);
   
@@ -18,6 +19,9 @@ export function AnalogClock({ timeMs }: { timeMs: number }) {
 
   return (
     <div className="relative w-full h-full rounded-full flex items-center justify-center shadow-inner overflow-hidden pointer-events-none">
+      <div className="absolute z-50 bg-black/80 text-white text-[8px] p-1 top-0 left-0">
+        t:{timeMs} h:{hourDegrees.toFixed(1)} m:{minuteDegrees.toFixed(1)}
+      </div>
       {/* Clock Face Details (Tick marks) */}
       <div className="absolute inset-0">
         {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
