@@ -945,25 +945,6 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
             </div>
           )}
 
-          {/* ── Event Roll Modal ── */}
-          {pendingEventResult && (
-            <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }}>
-              <div className="glass-panel flex flex-col gap-5 animate-fade-in-up" style={{ maxWidth: '400px', width: '90%', padding: '2rem', borderColor: 'var(--border-accent)', boxShadow: '0 0 50px var(--accent-glow)' }}>
-                <div className="text-center">
-                  <span className="text-5xl">🎲</span>
-                  <div className="section-heading mt-3"><h2>Fate Speaks</h2></div>
-                </div>
-                <p className="font-body text-base text-center font-medium" style={{ color: 'var(--text)', lineHeight: '1.6' }}>
-                  {pendingEventResult.entry.label}
-                </p>
-                <div className="flex justify-center gap-3 mt-3">
-                  <button onClick={() => setPendingEventResult(null)} className="btn-ghost">Dismiss</button>
-                  <button onClick={handleConfirmEvent} className="btn-fantasy">⚡ Confirm & Apply</button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ── Global Item Manager Modal ── */}
           {showItemManager && (
             <ItemManager 
@@ -1197,6 +1178,25 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
             </div>
           </div>
         )}
+
+          {/* ── Event Roll Modal ── */}
+          {pendingEventResult && (
+            <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)' }}>
+              <div className="glass-panel flex flex-col gap-5 animate-fade-in-up" style={{ maxWidth: '400px', width: '90%', padding: '2rem', borderColor: 'var(--border-accent)', boxShadow: '0 0 50px var(--accent-glow)' }}>
+                <div className="text-center">
+                  <span className="text-5xl">🎲</span>
+                  <div className="section-heading mt-3"><h2>Fate Speaks</h2></div>
+                </div>
+                <p className="font-body text-base text-center font-medium" style={{ color: 'var(--text)', lineHeight: '1.6' }}>
+                  {pendingEventResult.entry.label}
+                </p>
+                <div className="flex justify-center gap-3 mt-3">
+                  <button onClick={() => setPendingEventResult(null)} className="btn-ghost">Dismiss</button>
+                  <button onClick={handleConfirmEvent} className="btn-fantasy">⚡ Confirm & Apply</button>
+                </div>
+              </div>
+            </div>
+          )}
 
       <div className="fixed bottom-0 left-0 right-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.95)]" style={{ backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderTop: '4px solid #450a0a' }}>
         <button onClick={() => setActiveTab(null as any)} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${!activeTab ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
