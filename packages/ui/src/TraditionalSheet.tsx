@@ -41,7 +41,17 @@ export function TraditionalSheet({
 }: TraditionalSheetProps) {
 
   const [editingStat, setEditingStat] = useState<string | null>(null);
+  
+  // Health Modals State
   const [editingHp, setEditingHp] = useState(false);
+  const [editingTempHp, setEditingTempHp] = useState(false);
+  const [editingHitDice, setEditingHitDice] = useState(false);
+  
+  // Local Trackers State
+  const [tempHpInput, setTempHpInput] = useState(0);
+  const [deathSaves, setDeathSaves] = useState({ successes: 0, failures: 0 });
+  const [spentHitDice, setSpentHitDice] = useState(0);
+  const [activeResources, setActiveResources] = useState<Record<string, boolean>>({});
 
   const getResolvedStat = (statKey: string, fallback: number) => {
     if (overrideStats[statKey] != null) return overrideStats[statKey] as number;
@@ -93,6 +103,29 @@ export function TraditionalSheet({
       newCurrent = Math.max(0, newCurrent - amount);
     }
     onUpdateHp?.(newCurrent, hp.max, newTemp);
+  };
+
+  const handleRollHitDice = () => {
+    const hdStr = activeCharacter?.hitDice || '1d10';
+    const match = hdStr.match(/(\d+)d(\d+)/i);
+    let dieSize = 10;
+    let maxHd = 1;
+    if (match) {
+      maxHd = parseInt(match[1], 10);
+      dieSize = parseInt(match[2], 10);
+    }
+    
+    if (spentHitDice < maxHd) {
+      const roll = Math.floor(Math.random() * dieSize) + 1;
+      const conMod = getMod(getResolvedStat('con', baseStats['con'] ?? 10));
+      const healAmount = Math.max(1, roll + conMod);
+      handleHealDamage(healAmount, true);
+      setSpentHitDice(prev => prev + 1);
+      alert(`Rolled 1d${dieSize} + ${conMod} (CON) = Healed for ${healAmount} HP!`);
+      setEditingHitDice(false);
+    } else {
+      alert("No hit dice remaining!");
+    }
   };
 
   return (
@@ -153,7 +186,7 @@ export function TraditionalSheet({
                   <div key={stat} className="flex items-center gap-3 mb-2">
                     <button 
                       onClick={() => onToggleProficiency?.(stat.toLowerCase())}
-                      className={`w-4 h-4 rounded-full border cursor-pointer flex-shrink-0 ${isProf ? 'bg-zinc-400 border-zinc-300' : 'bg-transparent border-zinc-600'}`}
+                      className={`w-4 h-4 rounded-full border cursor-pointer flex-shrink-0 transition-colors ${isProf ? 'bg-zinc-400 border-zinc-300' : 'bg-transparent border-zinc-600'}`}
                     />
                     <span className="w-8 text-right text-sm font-semibold text-zinc-200">{formatMod(getSaveTotal(stat))}</span>
                     <span className="text-sm text-zinc-400 cursor-pointer hover:text-zinc-300" onClick={() => onToggleProficiency?.(stat.toLowerCase())}>{stat}</span>
@@ -172,7 +205,7 @@ export function TraditionalSheet({
                   <div key={skill} className="flex items-center gap-3 mb-2">
                     <button 
                       onClick={() => onToggleProficiency?.(skill.toLowerCase())}
-                      className={`w-4 h-4 rounded-full border cursor-pointer flex-shrink-0 ${isProf ? 'bg-zinc-400 border-zinc-300' : 'bg-transparent border-zinc-600'}`}
+                      className={`w-4 h-4 rounded-full border cursor-pointer flex-shrink-0 transition-colors ${isProf ? 'bg-zinc-400 border-zinc-300' : 'bg-transparent border-zinc-600'}`}
                     />
                     <span className="w-8 text-right text-sm font-semibold text-zinc-200">{formatMod(getSkillTotal(skill))}</span>
                     <div className="flex items-center gap-1.5">
@@ -215,54 +248,81 @@ export function TraditionalSheet({
             </button>
           </div>
 
-          {/* Health Section */}
-          <div className="p-6 rounded-lg bg-zinc-900 border border-zinc-800 relative group shadow-sm">
-            <button 
-              onClick={() => setEditingHp(true)}
-              className="absolute inset-0 w-full h-full bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors z-10 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
+          {/* Health Section Modular Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            
+            {/* Main HP (Red Box) */}
+            <div 
+               className="md:col-span-6 p-4 rounded-lg bg-red-950/20 border border-red-900/40 hover:border-red-500/50 cursor-pointer transition-colors flex flex-col justify-between min-h-[160px] shadow-sm"
+               onClick={() => setEditingHp(true)}
             >
-              <div className="bg-zinc-800 border border-zinc-700 text-zinc-200 px-5 py-2 rounded-full font-bold shadow-sm flex items-center gap-2">
-                <PlusIcon size={16} /> Edit Health <MinusIcon size={16} />
-              </div>
-            </button>
+               <div className="flex justify-between items-center mb-2">
+                 <span className="text-sm uppercase tracking-widest text-red-500/80 font-bold">Hit Points</span>
+                 <span className="text-xs text-red-500/60 font-semibold uppercase">Max {hp.max}</span>
+               </div>
+               <div className="flex items-end justify-center py-4">
+                 <span className={`text-6xl font-bold tracking-tighter ${hp.current <= hp.max * 0.25 ? 'text-red-500' : 'text-zinc-100'}`}>{hp.current}</span>
+               </div>
+            </div>
 
-            <div className="flex justify-between items-center mb-4">
-               <span className="text-sm uppercase tracking-widest text-zinc-500 font-bold">Hit Points</span>
-               <span className="text-sm text-zinc-500 font-semibold">Max: {hp.max}</span>
-            </div>
-            <div className="flex items-end justify-center py-8 rounded-lg bg-[#111113] border border-zinc-800/50 shadow-inner">
-               <span className={`text-8xl font-bold tracking-tighter ${hp.current <= hp.max * 0.25 ? 'text-red-500' : 'text-zinc-100'}`}>{hp.current}</span>
-            </div>
-            <div className="flex justify-between mt-6 pt-6 border-t border-zinc-800/50">
-              <div className="text-center w-1/3 border-r border-zinc-800/50">
-                <span className="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-2">Temp HP</span>
-                <span className="text-2xl font-bold text-zinc-300">{hp.temp ?? 0}</span>
-              </div>
-              <div className="text-center w-1/3 border-r border-zinc-800/50">
-                <span className="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-2">Hit Dice</span>
-                <span className="text-2xl font-bold text-zinc-300">{activeCharacter?.hitDice || '1d10'}</span>
-              </div>
-              <div className="text-center w-1/3">
-                <span className="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-3">Death Saves</span>
-                <div className="flex flex-col items-center gap-2 mx-auto w-32">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-zinc-400 uppercase font-bold w-6">Succ</span>
-                    <div className="flex gap-1.5">
-                      {[1,2,3].map(i => <div key={`s-${i}`} className="w-3.5 h-3.5 rounded-full border border-zinc-600 bg-transparent"></div>)}
+            <div className="md:col-span-6 grid grid-cols-2 gap-4">
+               {/* Temp HP (Orange Box) */}
+               <div 
+                 className="p-3 rounded-lg bg-orange-950/20 border border-orange-900/40 hover:border-orange-500/50 cursor-pointer transition-colors flex flex-col justify-between shadow-sm"
+                 onClick={() => { setTempHpInput(hp.temp ?? 0); setEditingTempHp(true); }}
+               >
+                 <span className="text-[10px] uppercase tracking-widest text-orange-500/80 font-bold text-center">Temp HP</span>
+                 <div className="flex justify-center items-center h-full mt-2">
+                    <span className="text-3xl font-bold text-zinc-100">{hp.temp ?? 0}</span>
+                 </div>
+               </div>
+
+               {/* Hit Dice (Green Box) */}
+               <div 
+                 className="p-3 rounded-lg bg-green-950/20 border border-green-900/40 hover:border-green-500/50 cursor-pointer transition-colors flex flex-col justify-between shadow-sm"
+                 onClick={() => setEditingHitDice(true)}
+               >
+                 <span className="text-[10px] uppercase tracking-widest text-green-500/80 font-bold text-center">Hit Dice</span>
+                 <div className="flex flex-col justify-center items-center h-full mt-2">
+                    <span className="text-2xl font-bold text-zinc-100">{activeCharacter?.hitDice || '1d10'}</span>
+                    <span className="text-[10px] text-green-500/60 font-bold mt-1 uppercase">Spent: {spentHitDice}</span>
+                 </div>
+               </div>
+
+               {/* Death Saves (Pink Box) - NON-INTERACTIVE BACKGROUND */}
+               <div className="p-3 rounded-lg bg-pink-950/10 border border-pink-900/30 flex flex-col justify-between pointer-events-none shadow-sm col-span-2">
+                 <span className="text-[10px] uppercase tracking-widest text-pink-500/60 font-bold text-center mb-2">Death Saves</span>
+                 <div className="flex items-center justify-around mt-1">
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                      <span className="text-[10px] text-zinc-400 uppercase font-bold">Succ</span>
+                      <div className="flex gap-1.5">
+                        {[1,2,3].map(i => (
+                           <button 
+                             key={`s-${i}`} 
+                             onClick={() => setDeathSaves(prev => ({ ...prev, successes: prev.successes === i ? i - 1 : i }))}
+                             className={`w-4 h-4 rounded-full border cursor-pointer transition-colors ${deathSaves.successes >= i ? 'bg-[#ff5200] border-[#ff5200]' : 'bg-transparent border-zinc-600 hover:border-zinc-500'}`} 
+                           />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-zinc-400 uppercase font-bold w-6">Fail</span>
-                    <div className="flex gap-1.5">
-                      {[1,2,3].map(i => <div key={`f-${i}`} className="w-3.5 h-3.5 rounded-full border border-zinc-600 bg-transparent"></div>)}
+                    <div className="flex items-center gap-2 pointer-events-auto">
+                      <span className="text-[10px] text-zinc-400 uppercase font-bold">Fail</span>
+                      <div className="flex gap-1.5">
+                        {[1,2,3].map(i => (
+                           <button 
+                             key={`f-${i}`} 
+                             onClick={() => setDeathSaves(prev => ({ ...prev, failures: prev.failures === i ? i - 1 : i }))}
+                             className={`w-4 h-4 rounded-full border cursor-pointer transition-colors ${deathSaves.failures >= i ? 'bg-[#ff5200] border-[#ff5200]' : 'bg-transparent border-zinc-600 hover:border-zinc-500'}`} 
+                           />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+                 </div>
+               </div>
             </div>
           </div>
 
-          {/* Resource Trackers Bar */}
+          {/* Resource Trackers Bar (Rage, etc.) */}
           {features.filter(f => f.type === 'resource' || f.type === 'active').length > 0 && (
              <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                {features.filter(f => f.type === 'resource' || f.type === 'active').map(f => (
@@ -270,13 +330,21 @@ export function TraditionalSheet({
                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 text-center leading-tight">{f.name}</span>
                     {f.type === 'resource' && f.resource && (
                       <div className="flex gap-1.5">
-                        {Array.from({length: f.resource.max}).map((_, i) => (
-                           <button key={i} className={`w-4 h-4 rounded-full border ${i < f.resource!.current ? 'bg-zinc-400 border-zinc-300' : 'bg-transparent border-zinc-600'}`} />
-                        ))}
+                        {Array.from({length: f.resource.max}).map((_, i) => {
+                           const resourceKey = `${f.id}-${i}`;
+                           const isActive = activeResources[resourceKey] || false;
+                           return (
+                             <button 
+                               key={i} 
+                               onClick={() => setActiveResources(prev => ({ ...prev, [resourceKey]: !isActive }))}
+                               className={`w-4 h-4 rounded-full border cursor-pointer transition-colors ${isActive ? 'bg-[#ff5200] border-[#ff5200]' : 'bg-transparent border-zinc-600 hover:border-zinc-500'}`} 
+                             />
+                           );
+                        })}
                       </div>
                     )}
                     {f.type === 'active' && (
-                      <button className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold uppercase rounded border border-zinc-700 transition-colors">
+                      <button className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold uppercase rounded border border-zinc-700 transition-colors cursor-pointer">
                         Activate
                       </button>
                     )}
@@ -343,7 +411,7 @@ export function TraditionalSheet({
             <div className="flex items-center gap-6 mb-8">
               <button 
                 onClick={() => onUpdateStat?.(editingStat, getResolvedStat(editingStat, baseStats[editingStat] ?? 10) - 1)}
-                className="w-16 h-16 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center text-zinc-400 transition-colors"
+                className="w-16 h-16 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
               >
                 <MinusIcon size={32} />
               </button>
@@ -356,73 +424,121 @@ export function TraditionalSheet({
 
               <button 
                 onClick={() => onUpdateStat?.(editingStat, getResolvedStat(editingStat, baseStats[editingStat] ?? 10) + 1)}
-                className="w-14 h-14 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
+                className="w-16 h-16 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
               >
-                <PlusIcon size={24} />
+                <PlusIcon size={32} />
               </button>
             </div>
             <div className="flex gap-3 w-full">
-              <button onClick={() => { setEditingStat(null); }} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold uppercase tracking-widest rounded transition-colors text-sm border border-zinc-700">Close</button>
-              <button onClick={() => { onUpdateStat?.(editingStat, null); setEditingStat(null); }} className="flex-1 px-4 py-3 bg-red-900/20 hover:bg-red-900/40 text-red-400 font-bold uppercase tracking-widest rounded transition-colors text-sm border border-red-900/30">Restore Auto</button>
+              <button onClick={() => { setEditingStat(null); }} className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold uppercase tracking-widest rounded transition-colors text-sm border border-zinc-700 cursor-pointer">Close</button>
+              <button onClick={() => { onUpdateStat?.(editingStat, null); setEditingStat(null); }} className="flex-1 px-4 py-3 bg-red-900/20 hover:bg-red-900/40 text-red-400 font-bold uppercase tracking-widest rounded transition-colors text-sm border border-red-900/30 cursor-pointer">Restore Auto</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Damage/Heal Modal */}
+      {/* Main HP Modal */}
       {editingHp && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 max-w-sm w-full shadow-2xl flex flex-col items-center">
-            <h2 className="text-xl font-bold text-zinc-300 uppercase tracking-widest mb-6">Manage Health</h2>
+            <h2 className="text-xl font-bold text-zinc-300 uppercase tracking-widest mb-6">Manage Hit Points</h2>
             
-            <div className="flex gap-4 mb-6 w-full justify-center">
+            <div className="flex gap-6 mb-6 w-full justify-center">
               <div className="flex flex-col items-center">
-                <span className="text-xs uppercase text-zinc-500 font-bold mb-1">Current</span>
-                <span className="text-3xl font-bold text-zinc-100">{hp.current}</span>
+                <span className="text-xs uppercase text-red-500/70 font-bold mb-1">Current</span>
+                <span className="text-4xl font-bold text-zinc-100">{hp.current}</span>
               </div>
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center opacity-50">
                 <span className="text-xs uppercase text-zinc-500 font-bold mb-1">Max</span>
-                <span className="text-3xl font-bold text-zinc-400">{hp.max}</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-xs uppercase text-zinc-500 font-bold mb-1">Temp</span>
-                <span className="text-2xl font-bold text-zinc-300">{hp.temp ?? 0}</span>
+                <span className="text-4xl font-bold text-zinc-100">{hp.max}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 w-full mb-6">
+            <div className="grid grid-cols-2 gap-4 w-full mb-8">
               {[1, 5, 10, 20].map(amt => (
                 <div key={amt} className="flex gap-2 w-full">
-                  <button onClick={() => handleHealDamage(amt, false)} className="flex-1 py-2 bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 font-bold rounded transition-colors text-sm cursor-pointer">
+                  <button onClick={() => handleHealDamage(amt, false)} className="flex-1 py-3 bg-red-950/40 hover:bg-red-900/60 border border-red-900/50 text-red-400 font-bold rounded transition-colors text-sm cursor-pointer">
                     -{amt}
                   </button>
-                  <button onClick={() => handleHealDamage(amt, true)} className="flex-1 py-2 bg-green-900/20 hover:bg-green-900/40 border border-green-900/30 text-green-400 font-bold rounded transition-colors text-sm cursor-pointer">
+                  <button onClick={() => handleHealDamage(amt, true)} className="flex-1 py-3 bg-green-950/40 hover:bg-green-900/60 border border-green-900/50 text-green-400 font-bold rounded transition-colors text-sm cursor-pointer">
                     +{amt}
                   </button>
                 </div>
               ))}
             </div>
 
-            <div className="w-full flex gap-3 mb-6">
-              <button onClick={() => onUpdateHp?.(hp.max, hp.max, 0)} className="flex-1 py-2 bg-zinc-800 border border-zinc-700 text-zinc-400 font-bold text-xs uppercase tracking-widest rounded hover:bg-zinc-700 transition-colors cursor-pointer">
-                Full Rest
-              </button>
-              <button onClick={() => {
-                const addTemp = parseInt(window.prompt('Enter Temp HP to add:') || '0', 10);
-                if (!isNaN(addTemp) && addTemp > 0) {
-                  onUpdateHp?.(hp.current, hp.max, Math.max(hp.temp ?? 0, addTemp));
-                }
-              }} className="flex-1 py-2 bg-zinc-800 border border-zinc-700 text-zinc-400 font-bold text-xs uppercase tracking-widest rounded hover:bg-zinc-700 transition-colors cursor-pointer">
-                + Temp HP
-              </button>
-            </div>
-
             <button 
               onClick={() => setEditingHp(false)}
-              className="w-full py-3 bg-zinc-100 hover:bg-white text-zinc-900 font-bold uppercase tracking-widest rounded transition-colors cursor-pointer"
+              className="w-full py-4 bg-zinc-100 hover:bg-white text-zinc-900 font-bold uppercase tracking-widest rounded transition-colors cursor-pointer shadow-md"
             >
               Done
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Temp HP Modal */}
+      {editingTempHp && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 max-w-[280px] w-full shadow-2xl flex flex-col items-center">
+            <h2 className="text-lg font-bold text-orange-500/80 uppercase tracking-widest mb-6">Temp HP</h2>
+            
+            <div className="flex items-center gap-4 mb-6">
+              <button 
+                onClick={() => setTempHpInput(Math.max(0, tempHpInput - 1))}
+                className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
+              >
+                <MinusIcon size={24} />
+              </button>
+              
+              <input 
+                 type="number"
+                 className="w-20 text-center bg-zinc-950 border border-zinc-800 text-2xl font-bold text-zinc-100 py-2 rounded focus:outline-none focus:border-orange-500/50"
+                 value={tempHpInput}
+                 onChange={(e) => setTempHpInput(parseInt(e.target.value) || 0)}
+              />
+
+              <button 
+                onClick={() => setTempHpInput(tempHpInput + 1)}
+                className="w-12 h-12 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
+              >
+                <PlusIcon size={24} />
+              </button>
+            </div>
+
+            <div className="flex gap-3 w-full">
+              <button onClick={() => setEditingTempHp(false)} className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold uppercase tracking-widest rounded transition-colors text-xs border border-zinc-700 cursor-pointer">Cancel</button>
+              <button onClick={() => { onUpdateHp?.(hp.current, hp.max, tempHpInput); setEditingTempHp(false); }} className="flex-1 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold uppercase tracking-widest rounded transition-colors text-xs border border-orange-500 cursor-pointer">Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hit Dice Modal */}
+      {editingHitDice && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 max-w-[320px] w-full shadow-2xl flex flex-col items-center">
+            <h2 className="text-lg font-bold text-green-500/80 uppercase tracking-widest mb-2">Short Rest</h2>
+            <p className="text-xs text-zinc-500 font-semibold mb-6 text-center uppercase">Spend Hit Dice to Heal</p>
+            
+            <div className="flex flex-col items-center mb-8 bg-zinc-950 p-4 rounded-lg border border-zinc-800 w-full">
+               <span className="text-xs uppercase text-zinc-500 font-bold mb-2">Available Dice</span>
+               <span className="text-3xl font-bold text-zinc-100">{activeCharacter?.hitDice || '1d10'}</span>
+               <div className="flex items-center gap-2 mt-4 text-xs font-bold uppercase tracking-widest">
+                  <span className="text-green-500/70">Spent</span>
+                  <span className="text-zinc-300">{spentHitDice}</span>
+               </div>
+            </div>
+
+            <div className="flex gap-3 w-full">
+              <button onClick={() => setEditingHitDice(false)} className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold uppercase tracking-widest rounded transition-colors text-xs border border-zinc-700 cursor-pointer">Close</button>
+              <button 
+                 onClick={handleRollHitDice} 
+                 className="flex-1 py-3 bg-green-700 hover:bg-green-600 text-white font-bold uppercase tracking-widest rounded transition-colors text-xs border border-green-600 cursor-pointer"
+              >
+                Roll Die
+              </button>
+            </div>
           </div>
         </div>
       )}
