@@ -1,15 +1,20 @@
 
 
-export function AnalogClock({ phaseIndex }: { phaseIndex: number }) {
-  // Map phaseIndex (0=Dawn, 1=Day, 2=Dusk, 3=Night) to hours (6, 12, 18, 24)
-  const hours = (phaseIndex * 6) + 6;
+export function AnalogClock({ timeMs }: { timeMs: number }) {
+  // Calculate total hours elapsed
+  const totalHours = timeMs / (1000 * 60 * 60);
   
-  // Calculate rotation for the hour hand.
-  // 12 hours = 360 degrees. 1 hour = 30 degrees.
-  const hourDegrees = hours * 30;
+  // Calculate exact rotation for the hour hand.
+  // 1 hour = 30 degrees. 
+  // We don't modulo 12 or 360 here because the CSS transition will spin backward 
+  // if the value drops (e.g. from 330 to 0). By continuously increasing the degrees,
+  // the clock hands will always advance forward cleanly in CSS!
+  const hourDegrees = totalHours * 30;
   
-  // Minute hand is always at 0 degrees since blocks are 6 exact hours.
-  const minuteDegrees = 0;
+  // Calculate total minutes elapsed
+  const totalMinutes = timeMs / (1000 * 60);
+  // 1 minute = 6 degrees
+  const minuteDegrees = totalMinutes * 6;
 
   return (
     <div className="relative w-full h-full rounded-full flex items-center justify-center shadow-inner overflow-hidden pointer-events-none">

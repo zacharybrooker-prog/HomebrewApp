@@ -585,6 +585,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
                   equipment={Object.values(equipment).filter(Boolean) as any}
                   role={role || 'player'}
                   phaseIndex={currentVisualBlock % 4}
+                  timeMs={visualTimeMs}
                   activeGlobalEffect={activeGlobalEffect}
                   activeEncounters={activeEncounters}
                   eventTables={eventTables}

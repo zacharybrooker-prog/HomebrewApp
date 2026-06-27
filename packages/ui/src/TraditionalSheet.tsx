@@ -19,8 +19,9 @@ export interface TraditionalSheetProps {
   overrideStats?: Record<string, number | null>;
   equipment?: Array<{ id?: string; name: string; description?: string }>;
   features?: Array<{ id?: string; name: string; description?: string; resource?: any; type?: string }>;
-  role?: 'dm' | 'player';
+  role?: 'player' | 'dm';
   phaseIndex?: number;
+  timeMs?: number;
   activeGlobalEffect?: any;
   activeEncounters?: any[];
   eventTables?: any[];
@@ -47,7 +48,7 @@ const STAT_NAMES = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wi
 
 export function TraditionalSheet({ 
   activeCharacter, hp, baseStats, computedStats = {}, overrideStats = {}, equipment = [], features = [], 
-  role = 'player', phaseIndex = 0, activeGlobalEffect, activeEncounters = [], eventTables = [],
+  role = 'player', phaseIndex = 0, timeMs = 0, activeGlobalEffect, activeEncounters = [], eventTables = [],
   onUpdateStat, onUpdateHp, onToggleProficiency, onAddItem,
   onClearGlobalEffect, onClearEncounter, onRollEvent
 }: TraditionalSheetProps) {
@@ -353,7 +354,7 @@ export function TraditionalSheet({
                  >
                     <div style={{ transform: 'scale(0.85)', transformOrigin: 'center', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                        {showAnalogClock ? (
-                         <AnalogClock phaseIndex={phaseIndex} />
+                         <AnalogClock timeMs={timeMs} />
                        ) : (
                          <TimeDial phaseIndex={phaseIndex} />
                        )}
