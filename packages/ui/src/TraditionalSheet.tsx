@@ -128,6 +128,18 @@ export function TraditionalSheet({
     }
   };
 
+  const handleTempHpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value);
+    if (isNaN(val)) setTempHpInput(0);
+    else setTempHpInput(Math.max(0, val));
+  };
+
+  const handleLongRest = () => {
+    onUpdateHp?.(hp.max, hp.max, 0);
+    setSpentHitDice(Math.max(0, spentHitDice - Math.max(1, Math.floor(parseInt(activeCharacter?.hitDice || '1') / 2))));
+    setEditingHp(false);
+  };
+
   return (
     <div className="min-h-screen text-zinc-100 font-sans pb-20 relative bg-[#18181b]">
       
@@ -454,7 +466,7 @@ export function TraditionalSheet({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 w-full mb-8">
+            <div className="grid grid-cols-2 gap-4 w-full mb-6">
               {[1, 5, 10, 20].map(amt => (
                 <div key={amt} className="flex gap-2 w-full">
                   <button onClick={() => handleHealDamage(amt, false)} className="flex-1 py-3 bg-red-950/40 hover:bg-red-900/60 border border-red-900/50 text-red-400 font-bold rounded transition-colors text-sm cursor-pointer">
@@ -465,6 +477,15 @@ export function TraditionalSheet({
                   </button>
                 </div>
               ))}
+            </div>
+
+            <div className="w-full mb-6">
+              <button 
+                onClick={handleLongRest}
+                className="w-full py-3 bg-blue-900/20 hover:bg-blue-900/40 border border-blue-900/40 text-blue-400 font-bold text-xs uppercase tracking-widest rounded transition-colors cursor-pointer"
+              >
+                Long Rest (Restore All)
+              </button>
             </div>
 
             <button 
@@ -494,8 +515,8 @@ export function TraditionalSheet({
               <input 
                  type="number"
                  className="w-20 text-center bg-zinc-950 border border-zinc-800 text-2xl font-bold text-zinc-100 py-2 rounded focus:outline-none focus:border-orange-500/50"
-                 value={tempHpInput}
-                 onChange={(e) => setTempHpInput(parseInt(e.target.value) || 0)}
+                 value={tempHpInput.toString()}
+                 onChange={handleTempHpChange}
               />
 
               <button 
