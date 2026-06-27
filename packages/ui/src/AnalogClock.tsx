@@ -12,7 +12,7 @@ export function AnalogClock({ phaseIndex }: { phaseIndex: number }) {
   const minuteDegrees = 0;
 
   return (
-    <div className="relative w-full h-full rounded-full border-2 border-yellow-900/50 bg-zinc-950 flex items-center justify-center shadow-inner overflow-hidden">
+    <div className="relative w-full h-full rounded-full flex items-center justify-center shadow-inner overflow-hidden pointer-events-none">
       {/* Clock Face Details (Tick marks) */}
       <div className="absolute inset-0">
         {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg, i) => (
@@ -25,23 +25,23 @@ export function AnalogClock({ phaseIndex }: { phaseIndex: number }) {
             }}
           >
             {/* The actual tick mark at the outer edge */}
-            <div className={`w-full ${i % 3 === 0 ? 'h-2.5 bg-yellow-700/80' : 'h-1.5 bg-yellow-900/50'}`} />
+            <div className={`w-full ${i % 3 === 0 ? 'h-2.5 bg-blue-700/80' : 'h-1.5 bg-blue-900/50'}`} />
           </div>
         ))}
       </div>
 
       {/* Center Pivot */}
-      <div className="absolute z-10 w-2 h-2 rounded-full bg-yellow-500 shadow-md border border-yellow-700"></div>
+      <div className="absolute z-10 w-2 h-2 rounded-full bg-blue-500 shadow-md border border-blue-700"></div>
 
       {/* Hour Hand */}
       <div 
-        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-1 rounded-t-full bg-yellow-600 origin-bottom transition-transform duration-1000 ease-in-out z-0"
+        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-1 rounded-t-full bg-blue-600 origin-bottom transition-transform duration-1000 ease-in-out z-0"
         style={{ height: '30%', transform: `translateX(-50%) rotate(${hourDegrees}deg)` }}
       ></div>
 
       {/* Minute Hand */}
       <div 
-        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-0.5 rounded-t-full bg-yellow-500/80 origin-bottom transition-transform duration-1000 ease-in-out z-0"
+        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-0.5 rounded-t-full bg-blue-500/80 origin-bottom transition-transform duration-1000 ease-in-out z-0"
         style={{ height: '40%', transform: `translateX(-50%) rotate(${minuteDegrees}deg)` }}
       ></div>
     </div>

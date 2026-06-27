@@ -347,7 +347,8 @@ export function TraditionalSheet({
               {/* Time Phase Dial / Analog Clock (Blue Circle) */}
               <div className="shrink-0 flex flex-col justify-end">
                  <button 
-                   onClick={() => setShowAnalogClock(!showAnalogClock)}
+                   type="button"
+                   onClick={(e) => { e.preventDefault(); setShowAnalogClock(!showAnalogClock); }}
                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-blue-900/40 bg-zinc-950/50 flex items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-blue-700/60 hover:bg-zinc-900/60 transition-colors"
                  >
                     <div style={{ transform: 'scale(0.85)', transformOrigin: 'center', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
