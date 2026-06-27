@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Shield as ShieldIcon, Plus, Minus, Swords, Compass, X } from 'lucide-react';
-import { TimeDial } from './components';
+import { TimeDial, AnalogClock } from './components';
 
 const Shield = ShieldIcon as any;
 const PlusIcon = Plus as any;
@@ -55,6 +55,7 @@ export function TraditionalSheet({
   const [editingStat, setEditingStat] = useState<string | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [showEventDropdown, setShowEventDropdown] = useState(false);
+  const [showAnalogClock, setShowAnalogClock] = useState(false);
   
   // Health Modals State
   const [editingHp, setEditingHp] = useState(false);
@@ -343,13 +344,20 @@ export function TraditionalSheet({
                  </div>
               </div>
 
-              {/* Time Phase Dial (Blue Circle) */}
+              {/* Time Phase Dial / Analog Clock (Blue Circle) */}
               <div className="shrink-0 flex flex-col justify-end">
-                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-blue-900/40 bg-zinc-950/50 flex items-center justify-center overflow-hidden shadow-sm pointer-events-none">
-                    <div style={{ transform: 'scale(0.85)', transformOrigin: 'center' }}>
-                       <TimeDial phaseIndex={phaseIndex} />
+                 <button 
+                   onClick={() => setShowAnalogClock(!showAnalogClock)}
+                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-blue-900/40 bg-zinc-950/50 flex items-center justify-center overflow-hidden shadow-sm cursor-pointer hover:border-blue-700/60 hover:bg-zinc-900/60 transition-colors"
+                 >
+                    <div style={{ transform: 'scale(0.85)', transformOrigin: 'center', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       {showAnalogClock ? (
+                         <AnalogClock phaseIndex={phaseIndex} />
+                       ) : (
+                         <TimeDial phaseIndex={phaseIndex} />
+                       )}
                     </div>
-                 </div>
+                 </button>
               </div>
             </div>
           </div>

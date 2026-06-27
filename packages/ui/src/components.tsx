@@ -1,4 +1,5 @@
 import { useState } from 'react';
+export { AnalogClock } from './AnalogClock';
 
 export function TimeDial({ phaseIndex }: { phaseIndex: number }) {
   return (
