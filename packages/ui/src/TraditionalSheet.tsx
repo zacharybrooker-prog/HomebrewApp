@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Shield as ShieldIcon, Plus, Minus, Swords, Compass } from 'lucide-react';
+import { Shield as ShieldIcon, Plus, Minus, Swords, Compass, X } from 'lucide-react';
+import { TimeDial } from './components';
 
 const Shield = ShieldIcon as any;
 const PlusIcon = Plus as any;
 const MinusIcon = Minus as any;
+const XIcon = X as any;
 
 export interface TraditionalSheetProps {
   activeCharacter?: any;
@@ -17,6 +19,14 @@ export interface TraditionalSheetProps {
   overrideStats?: Record<string, number | null>;
   equipment?: Array<{ id?: string; name: string; description?: string }>;
   features?: Array<{ id?: string; name: string; description?: string; resource?: any; type?: string }>;
+  role?: 'dm' | 'player';
+  phaseIndex?: number;
+  activeGlobalEffect?: any;
+  activeEncounters?: any[];
+  eventTables?: any[];
+  onClearGlobalEffect?: () => void;
+  onClearEncounter?: (id: string) => void;
+  onRollEvent?: (tableId: string) => void;
   onNavigate?: (tab: string) => void;
   onUpdateStat?: (stat: string, value: number | null) => void;
   onUpdateHp?: (current: number, max: number, temp: number) => void;
@@ -37,10 +47,14 @@ const STAT_NAMES = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wi
 
 export function TraditionalSheet({ 
   activeCharacter, hp, baseStats, computedStats = {}, overrideStats = {}, equipment = [], features = [], 
-  onUpdateStat, onUpdateHp, onToggleProficiency, onAddItem 
+  role = 'player', phaseIndex = 0, activeGlobalEffect, activeEncounters = [], eventTables = [],
+  onUpdateStat, onUpdateHp, onToggleProficiency, onAddItem,
+  onClearGlobalEffect, onClearEncounter, onRollEvent
 }: TraditionalSheetProps) {
 
   const [editingStat, setEditingStat] = useState<string | null>(null);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [showEventDropdown, setShowEventDropdown] = useState(false);
   
   // Health Modals State
   const [editingHp, setEditingHp] = useState(false);
@@ -171,9 +185,9 @@ export function TraditionalSheet({
                   className="relative flex flex-col items-center justify-center p-3 rounded-t-full rounded-b-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 transition-colors cursor-pointer group shadow-sm"
                 >
                   <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">{statKey}</span>
-                  <span className="text-3xl font-bold text-zinc-200">{score}</span>
+                  <span className="text-3xl font-bold text-zinc-200">{formatMod(getMod(score))}</span>
                   <div className="absolute -bottom-3 rounded-full px-3 py-0.5 text-sm font-bold text-zinc-300 bg-zinc-800 border border-zinc-700 shadow-sm">
-                    {formatMod(getMod(score))}
+                    {score}
                   </div>
                 </button>
               );
@@ -235,29 +249,109 @@ export function TraditionalSheet({
         {/* Center/Right Column: Combat & Vitals */}
         <div className="md:col-span-8 space-y-6">
           
-          {/* Top Row: AC, Initiative, Speed */}
-          <div className="flex gap-6 justify-center md:justify-start">
-            <button onClick={() => setEditingStat('ac')} className="flex flex-col items-center justify-center w-24 h-24 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm relative overflow-hidden group">
-              <Shield className="absolute inset-0 w-full h-full text-zinc-800/20 group-hover:text-zinc-700/30 transition-colors" strokeWidth={1} />
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 z-10">Armor Class</span>
-              <span className="text-3xl font-bold text-zinc-100 z-10">
-                 {getResolvedStat('ac', 10 + getMod(getResolvedStat('dex', baseStats['dex'] ?? 10)))}
-              </span>
-            </button>
+          {/* Top Row: Vitals & Campaign State */}
+          <div className="flex justify-between items-start w-full">
+            {/* Left: AC, Initiative, Speed */}
+            <div className="flex gap-4 sm:gap-6 shrink-0">
+              <button onClick={() => setEditingStat('ac')} className="flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm relative overflow-hidden group">
+                <Shield className="absolute inset-0 w-full h-full text-zinc-800/20 group-hover:text-zinc-700/30 transition-colors" strokeWidth={1} />
+                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 z-10">Armor Class</span>
+                <span className="text-2xl sm:text-3xl font-bold text-zinc-100 z-10">
+                   {getResolvedStat('ac', 10 + getMod(getResolvedStat('dex', baseStats['dex'] ?? 10)))}
+                </span>
+              </button>
 
-            <button onClick={() => setEditingStat('init')} className="flex flex-col items-center justify-center w-24 h-24 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm">
-               <span className="text-3xl font-bold text-zinc-100">
-                  {formatMod(getResolvedStat('init', getMod(getResolvedStat('dex', baseStats['dex'] ?? 10))))}
-               </span>
-               <span className="text-[10px] font-bold text-zinc-500 uppercase mt-2 tracking-widest">Initiative</span>
-            </button>
+              <button onClick={() => setEditingStat('init')} className="flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm">
+                 <span className="text-2xl sm:text-3xl font-bold text-zinc-100">
+                    {formatMod(getResolvedStat('init', getMod(getResolvedStat('dex', baseStats['dex'] ?? 10))))}
+                 </span>
+                 <span className="text-[9px] sm:text-[10px] font-bold text-zinc-500 uppercase mt-2 tracking-widest">Initiative</span>
+              </button>
 
-            <button onClick={() => setEditingStat('speed')} className="flex flex-col items-center justify-center w-24 h-24 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm">
-               <span className="text-3xl font-bold text-zinc-100">
-                  {getResolvedStat('speed', 30)}
-               </span>
-               <span className="text-[10px] font-bold text-zinc-500 uppercase mt-2 tracking-widest">Speed</span>
-            </button>
+              <button onClick={() => setEditingStat('speed')} className="flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer shadow-sm">
+                 <span className="text-2xl sm:text-3xl font-bold text-zinc-100">
+                    {getResolvedStat('speed', 30)}
+                 </span>
+                 <span className="text-[9px] sm:text-[10px] font-bold text-zinc-500 uppercase mt-2 tracking-widest">Speed</span>
+              </button>
+            </div>
+
+            {/* Right: Event Notifications & Time Phase */}
+            <div className="flex gap-4 items-stretch ml-4" style={{ maxWidth: '400px', flex: '1 1 auto' }}>
+              
+              {/* Event Notifications (Orange Box) */}
+              <div className="flex-1 flex flex-col min-w-0">
+                 {role === 'dm' && (
+                    <div className="flex justify-between items-end mb-1 px-1 relative">
+                       <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">Campaign Events</span>
+                       {eventTables && eventTables.length > 0 && (
+                         <button 
+                            onClick={() => setShowEventDropdown(!showEventDropdown)}
+                            className="w-5 h-5 flex items-center justify-center rounded bg-orange-950/40 text-orange-400 border border-orange-900/50 hover:bg-orange-900/60 transition-colors cursor-pointer"
+                         >
+                            <PlusIcon size={12} />
+                         </button>
+                       )}
+                       {showEventDropdown && eventTables && eventTables.length > 0 && (
+                          <div className="absolute top-full right-0 mt-1 w-48 bg-zinc-900 border border-zinc-700 rounded shadow-xl z-50 flex flex-col py-1">
+                             {eventTables.map(t => (
+                                <button key={t.id} onClick={() => { onRollEvent?.(t.id); setShowEventDropdown(false); }} className="px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-800 hover:text-orange-400 transition-colors">
+                                   Roll: {t.name}
+                                </button>
+                             ))}
+                          </div>
+                       )}
+                    </div>
+                 )}
+                 <div className="flex-1 bg-zinc-950/50 border border-orange-900/30 rounded-lg p-2 overflow-y-auto min-h-[60px] custom-scrollbar" style={{ maxHeight: '96px' }}>
+                    {(!activeGlobalEffect && (!activeEncounters || activeEncounters.length === 0)) ? (
+                       <div className="h-full flex items-center justify-center text-xs text-zinc-600 italic font-medium">No active events</div>
+                    ) : (
+                       <div className="flex flex-col gap-2 relative">
+                          {activeGlobalEffect && (
+                             <div className="bg-orange-950/20 border border-orange-900/20 rounded p-2">
+                                <div className="flex justify-between items-start gap-2">
+                                   <button className="flex-1 text-left text-xs font-bold text-orange-200 uppercase hover:text-orange-100 transition-colors cursor-pointer truncate" onClick={() => setExpandedEventId(expandedEventId === activeGlobalEffect.id ? null : activeGlobalEffect.id)}>
+                                      [Weather] {activeGlobalEffect.name}
+                                   </button>
+                                   {role === 'dm' && (
+                                      <button onClick={() => onClearGlobalEffect?.()} className="shrink-0 text-orange-500/50 hover:text-orange-400 transition-colors cursor-pointer"><XIcon size={12} /></button>
+                                   )}
+                                </div>
+                                {expandedEventId === activeGlobalEffect.id && activeGlobalEffect.description && (
+                                   <div className="mt-1 text-[10px] text-orange-200/70 leading-relaxed whitespace-pre-wrap">{activeGlobalEffect.description}</div>
+                                )}
+                             </div>
+                          )}
+                          {activeEncounters?.map(enc => (
+                             <div key={enc.id} className="bg-red-950/20 border border-red-900/20 rounded p-2">
+                                <div className="flex justify-between items-start gap-2">
+                                   <button className="flex-1 text-left text-xs font-bold text-red-200 uppercase hover:text-red-100 transition-colors cursor-pointer truncate" onClick={() => setExpandedEventId(expandedEventId === enc.id ? null : enc.id)}>
+                                      [Encounter] {enc.name}
+                                   </button>
+                                   {role === 'dm' && (
+                                      <button onClick={() => onClearEncounter?.(enc.id)} className="shrink-0 text-red-500/50 hover:text-red-400 transition-colors cursor-pointer"><XIcon size={12} /></button>
+                                   )}
+                                </div>
+                                {expandedEventId === enc.id && enc.description && (
+                                   <div className="mt-1 text-[10px] text-red-200/70 leading-relaxed whitespace-pre-wrap">{enc.description}</div>
+                                )}
+                             </div>
+                          ))}
+                       </div>
+                    )}
+                 </div>
+              </div>
+
+              {/* Time Phase Dial (Blue Circle) */}
+              <div className="shrink-0 flex flex-col justify-end">
+                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-blue-900/40 bg-zinc-950/50 flex items-center justify-center overflow-hidden shadow-sm pointer-events-none">
+                    <div style={{ transform: 'scale(0.85)', transformOrigin: 'center' }}>
+                       <TimeDial phaseIndex={phaseIndex} />
+                    </div>
+                 </div>
+              </div>
+            </div>
           </div>
 
           {/* Health Section Modular Grid */}

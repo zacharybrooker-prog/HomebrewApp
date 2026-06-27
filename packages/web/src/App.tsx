@@ -583,6 +583,14 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
                   computedStats={computedStats}
                   features={unlockedFeatures}
                   equipment={Object.values(equipment).filter(Boolean) as any}
+                  role={role || 'player'}
+                  phaseIndex={currentVisualBlock % 4}
+                  activeGlobalEffect={activeGlobalEffect}
+                  activeEncounters={activeEncounters}
+                  eventTables={eventTables}
+                  onClearGlobalEffect={() => store.setActiveGlobalEffect(null)}
+                  onClearEncounter={(id) => store.removeActiveEncounter(id)}
+                  onRollEvent={(tableId) => handleRollEvent(tableId)}
                   onNavigate={(tab) => {
                     if (tab === 'Overview') {
                       setActiveTab(null as any);
