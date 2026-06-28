@@ -172,6 +172,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       setCalendarEvents({ ...store.getCalendarEvents() });
       setCharacterProfiles([...store.getCharacterProfiles()]);
       setRevealedHandouts([...store.getRevealedHandouts()]);
+      setNotes([...store.getNotes()]);
       
       setSettings(sharedMap.get('settings') || { strictSpells: true });
       const age = store.getActiveGlobalEffect();
@@ -185,7 +186,6 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
     const updateDmState = () => {
       setMonsterTemplates([...(dmMap.get('monsterTemplates') || [])]);
       setEventTables([...(dmMap.get('eventTables') || [])]);
-      setNotes([...store.getNotes()]);
       setHandouts([...store.getHandouts()]);
     };
 
@@ -919,6 +919,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
             <div className="glass-panel animate-fade-in-up" style={{ minHeight: '60vh' }}>
               <Journal 
                 role={role}
+                activeCharId={activeCharId}
                 notes={notes}
                 handouts={handouts}
                 revealedHandouts={revealedHandouts}

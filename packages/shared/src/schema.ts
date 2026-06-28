@@ -450,6 +450,8 @@ export const NoteSchema = z.object({
   body: z.string().optional(),
   inGameDateString: z.string().optional(),
   inGameDayNumber: z.number().optional(),
+  category: z.string().optional(),
+  authorId: z.string().optional(),
 });
 export type Note = z.infer<typeof NoteSchema>;
 

@@ -996,11 +996,11 @@ export class CampaignStore {
   // ================= Phase 9: Journal & Handouts =================
 
   private getNotesMap(): Y.Map<any> {
-    const dmMap = this.getDmMap();
-    if (!dmMap.has('notesMap')) {
-      dmMap.set('notesMap', new Y.Map());
+    const sharedMap = this.getSharedMap();
+    if (!sharedMap.has('notesMap')) {
+      sharedMap.set('notesMap', new Y.Map());
     }
-    return dmMap.get('notesMap') as Y.Map<any>;
+    return sharedMap.get('notesMap') as Y.Map<any>;
   }
 
   private getHandoutsMap(): Y.Map<any> {
@@ -1020,18 +1020,15 @@ export class CampaignStore {
   }
 
   public getNotes(): Note[] {
-    if (this.role !== 'dm') return [];
     return Array.from(this.getNotesMap().values());
   }
 
   public saveNote(note: Note) {
-    if (this.role !== 'dm') throw new Error("Unauthorized");
     const validated = NoteSchema.parse(note);
     this.getNotesMap().set(validated.id, validated);
   }
 
   public deleteNote(noteId: string) {
-    if (this.role !== 'dm') throw new Error("Unauthorized");
     this.getNotesMap().delete(noteId);
   }
 
