@@ -470,7 +470,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
   return (
     <ThemeProvider phaseIndex={currentVisualBlock % 4}>
-      {activeTab !== 'sheet' && (
+      {activeTab !== 'sheet' && activeTab !== 'journal' && (
       <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.9)]" style={{ height: '80px', backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderBottom: '4px solid #450a0a' }}>
         {/* Left Zone: Location, Time & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -553,8 +553,8 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       </header>
       )}
 
-      {activeTab === 'sheet' ? (
-        <div className="w-full min-h-screen bg-stone-950">
+      {activeTab === 'sheet' && (
+        <div className="w-full min-h-screen bg-stone-950 pb-[80px]">
           {role === 'dm' && (
             <div className="p-4 bg-stone-900 border-b border-yellow-700/50">
               <div className="flex justify-between items-center max-w-6xl mx-auto">
@@ -632,8 +632,31 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
           })()}
           </div>
         </div>
-      ) : (
-      <div className="w-full min-h-screen flex flex-col items-center pb-16 pt-[110px] px-4">
+      )}
+
+      {activeTab === 'journal' && (
+        <div className="w-full min-h-screen bg-[#121212] pt-4 pb-[100px] px-2 md:px-6">
+          <Journal 
+            role={role}
+            activeCharId={activeCharId}
+            notes={notes}
+            handouts={handouts}
+            revealedHandouts={revealedHandouts}
+            onSaveNote={(note) => store.saveNote(note)}
+            onDeleteNote={(id) => store.deleteNote(id)}
+            onSaveHandout={(handout) => store.saveHandout(handout)}
+            onDeleteHandout={(id) => store.deleteHandout(id)}
+            onToggleReveal={(id, isRevealed) => {
+              const h = handouts.find(x => x.id === id);
+              if (h) store.saveHandout({ ...h, isRevealed });
+            }}
+            onExit={() => setActiveTab(null as any)}
+          />
+        </div>
+      )}
+
+      {activeTab !== 'sheet' && activeTab !== 'journal' && (
+      <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
           <div className="fixed top-4 right-4 flex flex-col gap-2 z-50" style={{ maxWidth: '280px' }}>
@@ -914,26 +937,6 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
             )}
           </div>
         )}
-
-        {activeTab === 'journal' && (
-            <div className="glass-panel animate-fade-in-up" style={{ minHeight: '60vh' }}>
-              <Journal 
-                role={role}
-                activeCharId={activeCharId}
-                notes={notes}
-                handouts={handouts}
-                revealedHandouts={revealedHandouts}
-                onSaveNote={(note) => store.saveNote(note)}
-                onDeleteNote={(id) => store.deleteNote(id)}
-                onSaveHandout={(handout) => store.saveHandout(handout)}
-                onDeleteHandout={(id) => store.deleteHandout(id)}
-                onToggleReveal={(id, isRevealed) => {
-                  const h = handouts.find(x => x.id === id);
-                  if (h) store.saveHandout({ ...h, isRevealed });
-                }}
-              />
-            </div>
-          )}
 
           {activeTab === 'settings' && (
             <div className="glass-panel flex flex-col gap-6 animate-fade-in-up">

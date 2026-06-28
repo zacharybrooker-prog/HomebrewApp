@@ -32,13 +32,14 @@ export interface JournalProps {
   onSaveHandout: (handout: Handout) => void;
   onDeleteHandout: (id: string) => void;
   onToggleReveal: (handoutId: string, isRevealed: boolean) => void;
+  onExit?: () => void;
 }
 
 const TABS = ['Campaign Lore', 'Session Notes', 'NPCs', 'Custom Recipes', 'Handouts'];
 
 export function Journal({ 
   role, activeCharId, notes, handouts, revealedHandouts,
-  onSaveNote, onDeleteNote, onSaveHandout, onDeleteHandout, onToggleReveal 
+  onSaveNote, onDeleteNote, onSaveHandout, onDeleteHandout, onToggleReveal, onExit
 }: JournalProps) {
   const [activeTab, setActiveTab] = useState<string>('Campaign Lore');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -297,7 +298,14 @@ export function Journal({
 
           {/* List Area */}
           <div className="flex-1 flex flex-col p-4 overflow-y-auto custom-scrollbar bg-[#1A1A1A]">
-            <h2 className="text-xl font-bold mb-4 text-white uppercase tracking-wider">{activeTab}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white uppercase tracking-wider m-0">{activeTab}</h2>
+              {onExit && (
+                <button onClick={onExit} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-wider bg-[#242424] px-2 py-1 rounded border border-[#333]">
+                  Exit
+                </button>
+              )}
+            </div>
             
             {!isHandoutsTab && (
               <>
