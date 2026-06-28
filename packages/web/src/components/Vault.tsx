@@ -15,9 +15,22 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
   const [password, setPassword] = useState('');
   const [joinCode, setJoinCode] = useState('');
 
+  const DISABLE_AUTH = true; // Toggle to false to restore real authentication
+
   useEffect(() => {
     let unsubSnapshot: () => void;
     
+    if (DISABLE_AUTH) {
+      const mockUser = { uid: 'dev-guest-001', email: 'guest@frogsworld.com', displayName: 'Guest User' } as any;
+      setUser(mockUser);
+      setView('vault');
+      const q = query(collection(db, `users/${mockUser.uid}/characters`));
+      unsubSnapshot = onSnapshot(q, (snap) => {
+        setCharacters(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      return () => { if (unsubSnapshot) unsubSnapshot(); };
+    }
+
     const unsubAuth = auth.onAuthStateChanged(u => {
       setUser(u);
       if (u) {
