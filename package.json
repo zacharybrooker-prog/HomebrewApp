@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.1.0",
   "scripts": {
-    "build": "cd packages/web && pnpm install --ignore-scripts && pnpm run build && cd ../.. && node build.mjs",
+    "build": "pnpm --filter web run build && node build.mjs",
     "dev": "cd packages/web && pnpm run dev",
     "lint": "cd packages/web && pnpm run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
