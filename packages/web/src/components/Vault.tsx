@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth, db, googleProvider, discordProvider } from '../firebase';
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInAnonymously } from 'firebase/auth';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { ManualCreator, GuidedCreator } from './CharacterCreator';
 import { DndBeyondImport } from './DndBeyondImport';
@@ -16,37 +16,11 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
   const [password, setPassword] = useState('');
   const [joinCode, setJoinCode] = useState('');
 
-  const DISABLE_AUTH = true; // Toggle to false to restore real authentication
-
   useEffect(() => {
     let unsubSnapshot: () => void;
     let unsubCampaigns: () => void;
     
     const unsubAuth = auth.onAuthStateChanged(u => {
-      if (DISABLE_AUTH) {
-        let guestUid = localStorage.getItem('frogsworld_guest_uid');
-        if (!guestUid && !u) {
-          guestUid = 'dev-guest-' + Math.random().toString(36).substring(2, 11);
-          localStorage.setItem('frogsworld_guest_uid', guestUid);
-        }
-        
-        const effectiveUser = u || { uid: guestUid, email: 'guest@frogsworld.com', displayName: 'Guest User' } as any;
-        setUser(effectiveUser);
-        setView('vault');
-        
-        const q = query(collection(db, `users/${effectiveUser.uid}/characters`));
-        unsubSnapshot = onSnapshot(q, (snap) => {
-          setCharacters(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
-
-        const cQ = query(collection(db, `users/${effectiveUser.uid}/campaigns`));
-        unsubCampaigns = onSnapshot(cQ, (snap) => {
-          setCampaigns(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
-        
-        return;
-      }
-
       setUser(u);
       if (u) {
         setView('vault');
@@ -100,6 +74,15 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
 
   const handleDiscord = async () => {
     try { await signInWithPopup(auth, discordProvider); } catch (e) { console.error(e); }
+  };
+
+  const handleAnonymous = async () => {
+    try { await signInAnonymously(auth); } catch (e: any) { 
+       console.error(e);
+       if (e.code === 'auth/unauthorized-domain') {
+          alert("Error: This domain is not authorized in Firebase. Please add this URL to your Firebase Console under Authentication -> Settings -> Authorized Domains.");
+       }
+    }
   };
 
   const handleEmailLogin = async () => {
@@ -190,10 +173,14 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
             <div className="flex-1 border-t border-stone-800"></div>
           </div>
 
-          <div className="flex gap-4 w-full">
+          <div className="flex gap-4 w-full mb-4">
             <button onClick={handleGoogle} className="flex-1 py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-widest rounded transition-colors text-xs border border-stone-700">Google</button>
             <button onClick={handleDiscord} className="flex-1 py-3 bg-[#5865F2]/20 hover:bg-[#5865F2]/40 text-[#5865F2] font-bold uppercase tracking-widest rounded transition-colors text-xs border border-[#5865F2]/50">Discord</button>
           </div>
+          
+          <button onClick={handleAnonymous} className="w-full py-4 bg-stone-900/50 hover:bg-stone-800 text-stone-400 hover:text-yellow-500 font-bold uppercase tracking-widest rounded transition-colors text-xs border border-stone-800 border-dashed">
+            Play as Guest (Saves to device)
+          </button>
         </div>
       </div>
     );
