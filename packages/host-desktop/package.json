@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "cd ../web && npm install --no-audit --no-fund --legacy-peer-deps && npm run build && cd ../host-desktop && rm -rf dist && cp -R ../web/dist ./dist",
+    "build": "cd ../web && pnpm install && pnpm run build && cd ../host-desktop && rm -rf dist && cp -R ../web/dist ./dist",
     "lint": "eslint .",
     "preview": "vite preview"
   },
