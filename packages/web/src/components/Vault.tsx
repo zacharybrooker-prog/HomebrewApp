@@ -8,6 +8,7 @@ import { DndBeyondImport } from './DndBeyondImport';
 export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin: (id: string, char?: any) => void }) {
   const [user, setUser] = useState(auth.currentUser);
   const [characters, setCharacters] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [view, setView] = useState<'login' | 'vault' | 'create-choice' | 'manual' | 'guided' | 'import'>('login');
   const [editingCharacter, setEditingCharacter] = useState<any>(null);
 
@@ -19,6 +20,7 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
 
   useEffect(() => {
     let unsubSnapshot: () => void;
+    let unsubCampaigns: () => void;
     
     const unsubAuth = auth.onAuthStateChanged(u => {
       if (DISABLE_AUTH) {
@@ -31,10 +33,17 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
         const effectiveUser = u || { uid: guestUid, email: 'guest@frogsworld.com', displayName: 'Guest User' } as any;
         setUser(effectiveUser);
         setView('vault');
+        
         const q = query(collection(db, `users/${effectiveUser.uid}/characters`));
         unsubSnapshot = onSnapshot(q, (snap) => {
           setCharacters(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
+
+        const cQ = query(collection(db, `users/${effectiveUser.uid}/campaigns`));
+        unsubCampaigns = onSnapshot(cQ, (snap) => {
+          setCampaigns(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        
         return;
       }
 
@@ -45,17 +54,45 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
         unsubSnapshot = onSnapshot(q, (snap) => {
           setCharacters(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
+
+        const cQ = query(collection(db, `users/${u.uid}/campaigns`));
+        unsubCampaigns = onSnapshot(cQ, (snap) => {
+          setCampaigns(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
       } else {
         setView('login');
         if (unsubSnapshot) unsubSnapshot();
+        if (unsubCampaigns) unsubCampaigns();
       }
     });
     
     return () => {
       unsubAuth();
       if (unsubSnapshot) unsubSnapshot();
+      if (unsubCampaigns) unsubCampaigns();
     };
   }, []);
+
+  const handleCreateCampaign = async () => {
+    if (!user) return;
+    const name = prompt("Enter a name for your new campaign:");
+    if (!name || name.trim() === "") return;
+    
+    const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    await addDoc(collection(db, `users/${user.uid}/campaigns`), {
+      name,
+      code: newCode,
+      createdAt: new Date().toISOString()
+    });
+    onHost(newCode);
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!user) return;
+    if (confirm("Are you sure you want to remove this campaign from your Vault?")) {
+      await deleteDoc(doc(db, `users/${user.uid}/campaigns`, id));
+    }
+  };
 
   const handleGoogle = async () => {
     try { await signInWithPopup(auth, googleProvider); } catch (e) { console.error(e); }
@@ -179,7 +216,7 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
               <p className="text-sm text-stone-500 mt-1">{characters.length} / 3 Characters Created</p>
             </div>
             <div className="flex gap-4">
-              <button onClick={() => onHost(Math.random().toString(36).substring(2, 6).toUpperCase())} className="btn-fantasy px-6 py-2 text-xs">Host Campaign</button>
+              <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <input 
                   className="input-fantasy w-24 text-center font-mono uppercase tracking-widest text-xs" 
@@ -248,6 +285,56 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                 );
               }
             })}
+          </div>
+          </div>
+
+          {/* Hosted Campaigns Section */}
+          <div className="mt-16">
+            <div className="flex justify-between items-end mb-6 border-b-2 border-yellow-900/50 pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-stone-200 drop-shadow-md">Hosted Campaigns</h2>
+                <p className="text-sm text-stone-500 mt-1">{campaigns.length} / 3 Campaigns Hosted</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[0, 1, 2].map(i => {
+                const camp = campaigns[i];
+                if (camp) {
+                  return (
+                    <div key={camp.id} className="tome-card h-64 p-6 flex flex-col relative group cursor-pointer">
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/90 rounded-lg pointer-events-none"></div>
+                      <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button onClick={() => handleDeleteCampaign(camp.id)} className="w-8 h-8 flex items-center justify-center bg-stone-800 text-stone-300 hover:text-red-500 rounded-full border border-stone-600 shadow-md">
+                           ✕
+                         </button>
+                      </div>
+                      <div className="relative z-10 flex-1">
+                        <h3 className="text-2xl font-bold text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{camp.name}</h3>
+                        <p className="text-sm font-bold uppercase tracking-widest text-stone-400 mt-2">Room Code</p>
+                        <div className="mt-2 flex gap-2">
+                           <span className="px-4 py-2 bg-stone-900/80 rounded border border-stone-700 text-lg text-stone-300 font-mono tracking-widest">{camp.code}</span>
+                        </div>
+                      </div>
+                      <div className="relative z-10 flex gap-2 mt-auto">
+                        <button onClick={() => onHost(camp.code)} className="btn-gold flex-1 py-3 text-xs">Resume Campaign</button>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div onClick={handleCreateCampaign} key={`empty-camp-${i}`} className="h-64 rounded-lg flex items-center justify-center cursor-pointer group shadow-[0_10px_30px_rgba(0,0,0,0.8),inset_0_0_50px_rgba(0,0,0,0.9)] transition-all hover:shadow-[0_10px_30px_rgba(0,0,0,0.8),inset_0_0_50px_rgba(234,179,8,0.2)] border-2 border-dashed border-stone-800 hover:border-yellow-700/50 bg-black/40">
+                       <div className="flex flex-col items-center">
+                         <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-all group-hover:scale-110 shadow-[0_0_20px_rgba(0,0,0,0.8)] border border-stone-800 group-hover:border-yellow-700 group-hover:shadow-[0_0_20px_rgba(234,179,8,0.3)] bg-stone-900">
+                           <span className="text-3xl text-stone-600 group-hover:text-yellow-500 drop-shadow-md">+</span>
+                         </div>
+                         <span className="text-xs uppercase font-bold tracking-widest text-stone-600 group-hover:text-yellow-600 transition-colors">Create New Campaign</span>
+                       </div>
+                    </div>
+                  );
+                }
+              })}
+            </div>
           </div>
         </div>
       )}
