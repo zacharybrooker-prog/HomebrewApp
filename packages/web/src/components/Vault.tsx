@@ -244,8 +244,8 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                     {/* Text Stage Container */}
                     <div className="relative z-10 flex flex-col items-center justify-center p-4 mt-8 mx-2 rounded-lg border border-yellow-900/30" 
                          style={{ 
-                           background: 'linear-gradient(to bottom, rgba(15,15,15,0.8), rgba(0,0,0,0.4))',
-                           backdropFilter: 'blur(3px)',
+                           background: 'linear-gradient(to bottom, rgba(15,15,15,0.9), rgba(0,0,0,0.7))',
+                           backdropFilter: 'blur(8px)',
                            boxShadow: '0 4px 15px rgba(0,0,0,0.8)'
                          }}>
                       <h3 className="font-bold text-yellow-500 text-center leading-tight w-full" 
@@ -315,8 +315,8 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                       {/* Text Stage Container */}
                       <div className="relative z-10 flex flex-col items-center justify-center p-4 mt-8 mx-2 rounded-lg border border-yellow-900/30"
                            style={{ 
-                             background: 'linear-gradient(to bottom, rgba(15,15,15,0.8), rgba(0,0,0,0.4))',
-                             backdropFilter: 'blur(3px)',
+                             background: 'linear-gradient(to bottom, rgba(15,15,15,0.9), rgba(0,0,0,0.7))',
+                             backdropFilter: 'blur(8px)',
                              boxShadow: '0 4px 15px rgba(0,0,0,0.8)'
                            }}>
                         <h3 className="font-bold text-yellow-500 text-center leading-tight w-full"
