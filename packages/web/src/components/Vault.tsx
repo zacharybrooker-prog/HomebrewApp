@@ -241,14 +241,30 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                          ✕
                        </button>
                     </div>
-                    <div className="relative z-10 flex-1">
-                      <h3 className="text-2xl font-bold text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{char.name || 'Unnamed'}</h3>
-                      <p className="text-sm font-bold uppercase tracking-widest text-stone-400 mt-2">{char.race || 'Unknown'} {char.charClass}</p>
-                      <div className="mt-4 flex gap-2">
-                         <span className="px-2 py-1 bg-stone-900/80 rounded border border-stone-700 text-xs text-stone-300 font-mono">LVL {char.level || 1}</span>
+                    {/* Text Stage Container */}
+                    <div className="relative z-10 flex flex-col items-center justify-center p-4 mt-8 mx-2 rounded-lg border border-yellow-900/30" 
+                         style={{ 
+                           background: 'linear-gradient(to bottom, rgba(15,15,15,0.8), rgba(0,0,0,0.4))',
+                           backdropFilter: 'blur(3px)',
+                           boxShadow: '0 4px 15px rgba(0,0,0,0.8)'
+                         }}>
+                      <h3 className="font-bold text-yellow-500 text-center leading-tight w-full" 
+                          style={{ 
+                            fontSize: 'clamp(1.2rem, 5vw, 1.7rem)',
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(234,179,8,0.3)',
+                            wordWrap: 'break-word'
+                          }}>
+                        {char.name || 'Unnamed'}
+                      </h3>
+                      <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mt-2 text-center" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+                         {char.race || 'Unknown'} {char.charClass}
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                         <span className="px-3 py-1 bg-stone-900/90 rounded border border-stone-700 text-xs text-stone-300 font-mono shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">LVL {char.level || 1}</span>
                       </div>
                     </div>
-                    <div className="relative z-10 flex gap-2 mt-auto">
+                    
+                    <div className="relative z-10 flex gap-2 mt-auto pt-4">
                       <button onClick={() => {
                         const newCampaignId = prompt("Enter the 4-digit code of the new campaign to join with this character:", "");
                         if (newCampaignId && newCampaignId.length === 4) {
@@ -296,14 +312,28 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                            ✕
                          </button>
                       </div>
-                      <div className="relative z-10 flex-1">
-                        <h3 className="text-2xl font-bold text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{camp.name}</h3>
-                        <p className="text-sm font-bold uppercase tracking-widest text-stone-400 mt-2">Room Code</p>
-                        <div className="mt-2 flex gap-2">
-                           <span className="px-4 py-2 bg-stone-900/80 rounded border border-stone-700 text-lg text-stone-300 font-mono tracking-widest">{camp.code}</span>
+                      {/* Text Stage Container */}
+                      <div className="relative z-10 flex flex-col items-center justify-center p-4 mt-8 mx-2 rounded-lg border border-yellow-900/30"
+                           style={{ 
+                             background: 'linear-gradient(to bottom, rgba(15,15,15,0.8), rgba(0,0,0,0.4))',
+                             backdropFilter: 'blur(3px)',
+                             boxShadow: '0 4px 15px rgba(0,0,0,0.8)'
+                           }}>
+                        <h3 className="font-bold text-yellow-500 text-center leading-tight w-full"
+                            style={{ 
+                              fontSize: 'clamp(1.2rem, 5vw, 1.7rem)',
+                              textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(234,179,8,0.3)',
+                              wordWrap: 'break-word'
+                            }}>
+                          {camp.name}
+                        </h3>
+                        <p className="text-xs font-bold uppercase tracking-widest text-stone-400 mt-2 text-center" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>Room Code</p>
+                        <div className="mt-3 flex gap-2">
+                           <span className="px-4 py-2 bg-stone-900/90 rounded border border-stone-700 text-lg text-stone-300 font-mono tracking-widest shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">{camp.code}</span>
                         </div>
                       </div>
-                      <div className="relative z-10 flex gap-2 mt-auto">
+                      
+                      <div className="relative z-10 flex gap-2 mt-auto pt-4">
                         <button onClick={() => onHost(camp.code)} className="btn-gold flex-1 py-3 text-xs">Resume Campaign</button>
                       </div>
                     </div>
