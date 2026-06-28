@@ -242,7 +242,7 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                        </button>
                     </div>
                     {/* Text Stage Container */}
-                    <div className="relative z-10 flex flex-col items-center justify-center p-4 mt-8 mx-2 rounded-lg border border-yellow-900/30" 
+                    <div className="relative z-10 flex flex-col items-center justify-center p-3 mt-10 mx-6 rounded-lg border border-yellow-900/30" 
                          style={{ 
                            background: 'linear-gradient(to bottom, rgba(15,15,15,0.9), rgba(0,0,0,0.7))',
                            backdropFilter: 'blur(8px)',
@@ -250,7 +250,7 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                          }}>
                       <h3 className="font-bold text-yellow-500 text-center leading-tight w-full" 
                           style={{ 
-                            fontSize: 'clamp(1.2rem, 5vw, 1.7rem)',
+                            fontSize: 'clamp(1rem, 4vw, 1.3rem)',
                             textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(234,179,8,0.3)',
                             wordWrap: 'break-word'
                           }}>
@@ -313,7 +313,7 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                          </button>
                       </div>
                       {/* Text Stage Container */}
-                      <div className="relative z-10 flex flex-col items-center justify-center p-4 mt-8 mx-2 rounded-lg border border-yellow-900/30"
+                      <div className="relative z-10 flex flex-col items-center justify-center p-3 mt-10 mx-6 rounded-lg border border-yellow-900/30"
                            style={{ 
                              background: 'linear-gradient(to bottom, rgba(15,15,15,0.9), rgba(0,0,0,0.7))',
                              backdropFilter: 'blur(8px)',
@@ -321,7 +321,7 @@ export function Vault({ onHost, onJoin }: { onHost: (id: string) => void, onJoin
                            }}>
                         <h3 className="font-bold text-yellow-500 text-center leading-tight w-full"
                             style={{ 
-                              fontSize: 'clamp(1.2rem, 5vw, 1.7rem)',
+                              fontSize: 'clamp(1rem, 4vw, 1.3rem)',
                               textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(234,179,8,0.3)',
                               wordWrap: 'break-word'
                             }}>
