@@ -733,7 +733,13 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
         );
       })()}
 
-      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && (
+      {activeTab === 'spells' && (
+        <div className="w-full min-h-[100dvh] bg-[#121212] pt-[110px] pb-[100px] px-2 md:px-6">
+          <SpellsCompendium role={role} settings={settings} onExit={() => setActiveTab(null as any)} />
+        </div>
+      )}
+
+      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && activeTab !== 'spells' && (
       <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
@@ -1131,9 +1137,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
             <p className="text-muted-foreground">Discover and document flora, herbs, and natural ingredients.</p>
           </div>
         )}
-        {activeTab === 'spells' && (
-          <SpellsCompendium role={role} settings={settings} />
-        )}
+
         {activeTab === 'items' && (
           <MagicItemsCompendium role={role} store={store} activeCharId={activeCharId} characterProfiles={characterProfiles} />
         )}

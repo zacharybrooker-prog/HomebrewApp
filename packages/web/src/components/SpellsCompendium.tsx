@@ -80,7 +80,7 @@ export const seedSRDSpells = async () => {
 };
 
 // ====== COMPONENT ======
-export function SpellsCompendium({ role, settings }: { role: 'dm' | 'player' | null, settings?: { strictSpells?: boolean } }) {
+export function SpellsCompendium({ role, settings, onExit }: { role: 'dm' | 'player' | null, settings?: { strictSpells?: boolean }, onExit?: () => void }) {
   const [spells, setSpells] = useState<Spell[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('all');
@@ -156,9 +156,33 @@ export function SpellsCompendium({ role, settings }: { role: 'dm' | 'player' | n
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in-up">
+    <div className="flex flex-col gap-6 animate-fade-in-up h-full max-w-7xl mx-auto w-full">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white uppercase tracking-wider m-0">Spells Compendium</h2>
+        {onExit && (
+          <button onClick={onExit} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-wider bg-[#242424] px-3 py-1.5 rounded border border-[#333] transition-colors">
+            Exit
+          </button>
+        )}
+      </div>
+
+      {/* SCHOOL TABS */}
+      <div className="flex items-center bg-[#1A1A1A] p-2 rounded-lg border border-[#2a2a2a] overflow-x-auto custom-scrollbar">
+        {['all', 'abjuration', 'conjuration', 'divination', 'enchantment', 'evocation', 'illusion', 'necromancy', 'transmutation'].map(sch => (
+          <button
+            key={sch}
+            onClick={() => setFilterSchool(sch)}
+            className={`flex-none px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+              filterSchool === sch ? 'text-blue-500 border-blue-500 bg-[#242424]' : 'text-gray-500 border-transparent hover:text-gray-300'
+            }`}
+          >
+            {sch}
+          </button>
+        ))}
+      </div>
+
       {/* HEADER CONTROLS */}
-      <div className="glass-panel p-4 flex flex-col md:flex-row gap-4 justify-between items-center sticky top-0 z-10">
+      <div className="glass-panel p-4 flex flex-col md:flex-row gap-4 justify-between items-center z-10" style={{ backgroundColor: '#121212' }}>
         <div className="flex gap-2 w-full md:w-auto flex-wrap">
           <input 
             type="text" 
@@ -172,12 +196,7 @@ export function SpellsCompendium({ role, settings }: { role: 'dm' | 'player' | n
             <option value="0">Cantrip</option>
             {[1,2,3,4,5,6,7,8,9].map(lvl => <option key={lvl} value={lvl.toString()}>Level {lvl}</option>)}
           </select>
-          <select className="input-fantasy capitalize" value={filterSchool} onChange={e => setFilterSchool(e.target.value)}>
-            <option value="all">All Schools</option>
-            {['abjuration', 'conjuration', 'divination', 'enchantment', 'evocation', 'illusion', 'necromancy', 'transmutation'].map(sch => (
-              <option key={sch} value={sch}>{sch}</option>
-            ))}
-          </select>
+
           <select className="input-fantasy capitalize" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
             <option value="all">All Classes</option>
             {['artificer', 'bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'warlock', 'wizard'].map(cls => (
@@ -194,7 +213,7 @@ export function SpellsCompendium({ role, settings }: { role: 'dm' | 'player' | n
       </div>
 
       {/* LIST RENDERING */}
-      <div className="glass-panel p-0 flex flex-col flex-1 relative overflow-hidden h-[600px]">
+      <div className="glass-panel p-0 flex flex-col flex-1 relative overflow-hidden" style={{ minHeight: '400px' }}>
         <div className="grid grid-cols-[1fr_80px_120px] gap-4 px-6 py-3 text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-[var(--border)] bg-black/40">
           <div>Spell Name</div>
           <div>Level</div>
