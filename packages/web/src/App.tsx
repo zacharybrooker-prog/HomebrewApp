@@ -2,12 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
 import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet } from '@frogs-world/ui';
-import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon } from 'lucide-react';
+import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon } from 'lucide-react';
 
 const User = UserIcon as any;
 const Scroll = ScrollIcon as any;
 const Wand2 = Wand2Icon as any;
 const BookOpen = BookOpenIcon as any;
+const CalendarDays = CalendarDaysIcon as any;
 import { auth, db } from './firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
@@ -1235,6 +1236,10 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
         <button onClick={() => setActiveTab('journal')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'journal' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <BookOpen size={20} />
           <span className="text-[10px] uppercase font-bold tracking-widest">Journal</span>
+        </button>
+        <button onClick={() => { setActiveTab('calendar'); setCalendarViewOffset(0); }} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'calendar' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+          <CalendarDays size={20} />
+          <span className="text-[10px] uppercase font-bold tracking-widest">Calendar</span>
         </button>
       </div>
     </ThemeProvider>
