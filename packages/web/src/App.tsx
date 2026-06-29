@@ -82,6 +82,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
   const [pendingEventResult, setPendingEventResult] = useState<{result: EventResult, entry: EventEntry} | null>(null);
   const [calendarConfig, setCalendarConfig] = useState<CalendarConfig | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<Record<number, string[]>>({});
+  const [calendarViewOffset, setCalendarViewOffset] = useState<number>(0);
   const [characterProfiles, setCharacterProfiles] = useState<CharacterProfile[]>([]);
   const [activeCharId, setActiveCharId] = useState<string | null>(initialCharacterId || null);
 
@@ -635,7 +636,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       )}
 
       {activeTab === 'journal' && (
-        <div className="w-full min-h-screen bg-[#121212] pt-4 pb-[100px] px-2 md:px-6">
+        <div className="w-full min-h-[100dvh] bg-[#121212] pt-4 pb-[100px] px-2 md:px-6">
           <Journal 
             role={role}
             activeCharId={activeCharId}
@@ -655,7 +656,83 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
         </div>
       )}
 
-      {activeTab !== 'sheet' && activeTab !== 'journal' && (
+      {activeTab === 'calendar' && calendarConfig && (() => {
+        const currentDate = calculateDate(currentVisualBlock, calendarConfig);
+        const totalMonths = calendarConfig.months.length;
+        const currentAbsoluteMonth = currentDate.year * totalMonths + currentDate.monthIndex;
+        const viewedAbsoluteMonth = currentAbsoluteMonth + calendarViewOffset;
+        
+        const viewedYear = Math.floor(viewedAbsoluteMonth / totalMonths);
+        const viewedMonthIndex = ((viewedAbsoluteMonth % totalMonths) + totalMonths) % totalMonths;
+        const currentMonthData = calendarConfig.months[viewedMonthIndex];
+        
+        const daysPerYear = calendarConfig.months.reduce((acc, m) => acc + m.days, 0);
+        let daysPassedForViewedStart = (viewedYear - calendarConfig.startYear) * daysPerYear;
+        for (let i = 0; i < viewedMonthIndex; i++) {
+          daysPassedForViewedStart += calendarConfig.months[i].days;
+        }
+        
+        const firstDayOfWeekIndex = ((daysPassedForViewedStart % calendarConfig.weekdays.length) + calendarConfig.weekdays.length) % calendarConfig.weekdays.length;
+        const activeDayOfMonth = (calendarViewOffset === 0) ? currentDate.dayOfMonth : -1;
+
+        return (
+          <div className="w-full min-h-[100dvh] bg-[#121212] pt-[110px] pb-[100px] px-2 md:px-6">
+            <CalendarView 
+              role={role}
+              year={viewedYear}
+              monthName={currentMonthData.name}
+              daysInMonth={currentMonthData.days}
+              currentDayOfMonth={activeDayOfMonth}
+              weekdays={calendarConfig.weekdays}
+              firstDayOfWeekIndex={firstDayOfWeekIndex}
+              totalDaysPassedAtMonthStart={daysPassedForViewedStart}
+              events={calendarEvents}
+              moons={calendarConfig.moons}
+              onAddEvent={(offset, evt) => { try { store.addCalendarEvent(offset, evt); } catch(e:any){alert(e.message);} }}
+              onRemoveEvent={(offset, idx) => { try { store.removeCalendarEvent(offset, idx); } catch(e:any){alert(e.message);} }}
+              onExit={() => setActiveTab(null as any)}
+              allMonths={calendarConfig.months.map(m => m.name)}
+              viewedMonthIndex={viewedMonthIndex}
+              onNextMonth={() => setCalendarViewOffset(prev => prev + 1)}
+              onPrevMonth={() => setCalendarViewOffset(prev => prev - 1)}
+              onSelectMonthIndex={(idx) => {
+                const diff = idx - viewedMonthIndex;
+                setCalendarViewOffset(prev => prev + diff);
+              }}
+            />
+            
+            {role === 'dm' && (
+              <div className="flex flex-col gap-4 items-center mt-8 max-w-xl mx-auto">
+                <button 
+                  onClick={() => {
+                    const el = document.getElementById('calendar-settings-container');
+                    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                  }} 
+                  className="px-6 py-2 rounded font-bold text-sm bg-stone-900 text-stone-300 border border-yellow-700/50 hover:bg-stone-800 transition-colors"
+                >
+                  ⚙️ Adjust Calendar Settings
+                </button>
+                <div id="calendar-settings-container" style={{ display: 'none', width: '100%' }}>
+                  <CalendarEditor 
+                    startYear={calendarConfig.startYear}
+                    weekdays={calendarConfig.weekdays}
+                    months={calendarConfig.months}
+                    onUpdate={(cfg) => {
+                      try { 
+                        store.updateCalendarConfig(cfg); 
+                        const el = document.getElementById('calendar-settings-container');
+                        if (el) el.style.display = 'none';
+                      } catch(e:any) { alert(e.message); }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && (
       <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
@@ -810,6 +887,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
                     setIsGlossaryOpen(true);
                   } else {
                     setActiveTab(tab as any);
+                    if (tab === 'calendar') setCalendarViewOffset(0);
                   }
                 }}
                 className={`master-grid-btn min-h-[44px] ${activeTab === tab && tab !== 'glossary' ? 'active' : ''}`}
@@ -874,68 +952,6 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
               dmMap.set('eventTables', tables);
             }}
           />
-        )}
-
-        {activeTab === 'calendar' && calendarConfig && (
-          <div className="flex flex-col gap-6">
-            {(() => {
-              const date = calculateDate(currentVisualBlock, calendarConfig);
-              const currentMonth = calendarConfig.months[date.monthIndex];
-              if (!currentMonth) return <div>Invalid Config</div>;
-              const totalDaysPassedAtMonthStart = date.totalDaysPassed - (date.dayOfMonth - 1);
-              const firstDayOfWeekIndex = ((totalDaysPassedAtMonthStart % calendarConfig.weekdays.length) + calendarConfig.weekdays.length) % calendarConfig.weekdays.length;
-
-              return (
-                <CalendarView 
-                  role={role || 'player'}
-                  year={date.year}
-                  monthName={currentMonth.name}
-                  daysInMonth={currentMonth.days}
-                  currentDayOfMonth={date.dayOfMonth}
-                  weekdays={calendarConfig.weekdays}
-                  firstDayOfWeekIndex={firstDayOfWeekIndex}
-                  totalDaysPassedAtMonthStart={totalDaysPassedAtMonthStart}
-                  events={calendarEvents}
-                  moons={calendarConfig.moons}
-                  onAddEvent={(offset, evt) => {
-                    try { store.addCalendarEvent(offset, evt); } catch(e:any) { alert(e.message); }
-                  }}
-                  onRemoveEvent={(offset, idx) => {
-                    try { store.removeCalendarEvent(offset, idx); } catch(e:any) { alert(e.message); }
-                  }}
-                />
-              );
-            })()}
-            {role === 'dm' && (
-              <div className="flex flex-col gap-4 items-center">
-                <button 
-                  onClick={() => {
-                    const el = document.getElementById('calendar-settings-container');
-                    if (el) {
-                      el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                    }
-                  }} 
-                  className="btn-ghost"
-                >
-                  ⚙️ Adjust Calendar Settings
-                </button>
-                <div id="calendar-settings-container" style={{ display: 'none', width: '100%' }}>
-                  <CalendarEditor 
-                    startYear={calendarConfig.startYear}
-                    weekdays={calendarConfig.weekdays}
-                    months={calendarConfig.months}
-                    onUpdate={(cfg) => {
-                      try { 
-                        store.updateCalendarConfig(cfg); 
-                        const el = document.getElementById('calendar-settings-container');
-                        if (el) el.style.display = 'none';
-                      } catch(e:any) { alert(e.message); }
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         )}
 
           {activeTab === 'settings' && (

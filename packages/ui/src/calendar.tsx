@@ -203,12 +203,19 @@ interface CalendarViewProps {
   moons?: MoonConfig[];
   onAddEvent: (dayOffset: number, evt: string) => void;
   onRemoveEvent: (dayOffset: number, index: number) => void;
+  onExit?: () => void;
+  allMonths?: string[];
+  viewedMonthIndex?: number;
+  onNextMonth?: () => void;
+  onPrevMonth?: () => void;
+  onSelectMonthIndex?: (index: number) => void;
 }
 
 export function CalendarView({ 
   role, year, monthName, daysInMonth, currentDayOfMonth, 
   weekdays, firstDayOfWeekIndex, totalDaysPassedAtMonthStart, 
-  events, moons, onAddEvent, onRemoveEvent 
+  events, moons, onAddEvent, onRemoveEvent,
+  onExit, allMonths = [], viewedMonthIndex = 0, onNextMonth, onPrevMonth, onSelectMonthIndex
 }: CalendarViewProps) {
   
   const blankDaysBefore = firstDayOfWeekIndex;
@@ -225,17 +232,46 @@ export function CalendarView({
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in-up">
-      <div className="text-center">
-        <h2 className="font-heading text-2xl" style={{ color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)' }}>
+    <div className="flex flex-col gap-6 animate-fade-in-up max-w-6xl mx-auto w-full">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white uppercase tracking-wider m-0">Campaign Calendar</h2>
+        {onExit && (
+          <button onClick={onExit} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-wider bg-[#242424] px-3 py-1.5 rounded border border-[#333] transition-colors">
+            Exit
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between bg-[#1A1A1A] p-2 rounded-lg border border-[#2a2a2a]">
+        <button onClick={onPrevMonth} className="px-4 py-2 text-gray-400 hover:text-white bg-[#242424] rounded border border-[#333]">&lt; Prev</button>
+        
+        <div className="flex-1 flex overflow-x-auto custom-scrollbar mx-4">
+          {allMonths.map((mName, idx) => (
+            <button
+              key={mName + idx}
+              onClick={() => onSelectMonthIndex?.(idx)}
+              className={`flex-none px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+                viewedMonthIndex === idx ? 'text-red-500 border-red-500 bg-[#242424]' : 'text-gray-500 border-transparent hover:text-gray-300'
+              }`}
+            >
+              {mName}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onNextMonth} className="px-4 py-2 text-gray-400 hover:text-white bg-[#242424] rounded border border-[#333]">Next &gt;</button>
+      </div>
+
+      <div className="text-center mt-2">
+        <h2 className="font-heading text-4xl" style={{ color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)' }}>
           {monthName}
         </h2>
-        <div className="text-sm uppercase tracking-widest text-muted-foreground mt-1">
+        <div className="text-base uppercase tracking-widest text-muted-foreground mt-2 font-bold">
           Year {year}
         </div>
       </div>
       
-      <div className="glass-panel p-4" style={{ borderColor: 'var(--border-accent)' }}>
+      <div className="glass-panel p-2 md:p-6 shadow-2xl" style={{ borderColor: 'var(--border-accent)', backgroundColor: '#121212' }}>
         <div className="grid" style={{ gridTemplateColumns: `repeat(${weekdays.length}, minmax(0, 1fr))` }}>
           {/* Header */}
           {weekdays.map((wd: string) => (
@@ -260,36 +296,32 @@ export function CalendarView({
             return (
               <div 
                 key={dayNum} 
+                className={`relative flex flex-col p-2 min-h-[100px] border-b border-r border-[#2a2a2a] group ${isToday ? 'bg-red-900/10' : 'hover:bg-[#1a1a1a] transition-colors'} ${role === 'dm' ? 'cursor-pointer' : ''}`}
                 onClick={() => handleCellClick(dayNum)}
-                className={`relative p-1 sm:p-2 min-h-[60px] sm:min-h-[80px] border-b border-r border-[var(--glass-border)] transition-all ${role === 'dm' ? 'cursor-pointer hover:bg-[rgba(255,255,255,0.05)]' : ''}`}
-                style={{ 
-                  background: isToday ? 'rgba(225, 29, 72, 0.15)' : 'transparent',
-                  boxShadow: isToday ? 'inset 0 0 15px var(--accent-glow)' : 'none'
-                }}
               >
                 <div className="flex justify-between items-start">
-                  <span className={`font-bold tabular-nums text-sm ${isToday ? 'text-accent' : 'text-text'}`}>
+                  <span className={`text-sm md:text-lg font-bold font-serif ${isToday ? 'text-red-500' : 'text-gray-400'}`}>
                     {dayNum}
                   </span>
-                  <div className="flex gap-1">
+                  <div className="flex flex-col gap-1">
                     {dayMoons.map(m => (
                       <span key={m.config.id} className="text-[10px]" title={`${m.config.name}: ${m.phaseName}`} style={{ color: m.config.color || '#fff', textShadow: `0 0 5px ${m.config.color || '#fff'}` }}>
                         🌑
                       </span>
                     ))}
-                    {isToday && <span className="text-xs ml-1" title="Current Day">✨</span>}
+                    {isToday && (
+                      <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                    )}
                   </div>
                 </div>
                 
-                <div className="mt-1 flex flex-col gap-1">
+                <div className="mt-2 flex flex-col gap-1 overflow-y-auto">
                   {dayEvents.map((evt: string, eIdx: number) => (
-                    <div key={eIdx} className="group relative">
-                      <div className="text-[10px] leading-tight px-1 py-0.5 rounded bg-black/50 text-secondary border border-border overflow-hidden text-ellipsis whitespace-nowrap">
-                        {evt}
-                      </div>
+                    <div key={eIdx} className="text-xs bg-[#242424] text-gray-300 p-1.5 rounded border border-[#333] shadow flex justify-between group/evt hover:border-[#444]">
+                      <span className="truncate">{evt}</span>
                       {role === 'dm' && (
                         <button 
-                          className="absolute -top-2 -right-2 w-4 h-4 bg-danger text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="w-4 h-4 bg-red-900/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover/evt:opacity-100 transition-opacity"
                           onClick={(e) => { e.stopPropagation(); onRemoveEvent(absoluteDayOffset, eIdx); }}
                         >✕</button>
                       )}
