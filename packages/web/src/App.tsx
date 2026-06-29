@@ -472,7 +472,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
   return (
     <ThemeProvider phaseIndex={currentVisualBlock % 4}>
-      {activeTab !== 'sheet' && activeTab !== 'journal' && (
+      {activeTab !== 'sheet' && (
       <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.9)]" style={{ height: '80px', backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderBottom: '4px solid #450a0a' }}>
         {/* Left Zone: Location, Time & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -637,7 +637,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       )}
 
       {activeTab === 'journal' && (
-        <div className="w-full min-h-[100dvh] bg-[#121212] pt-4 pb-[100px] px-2 md:px-6">
+        <div className="w-full min-h-[100dvh] bg-[#121212] pt-[110px] pb-[100px] px-2 md:px-6">
           <Journal 
             role={role}
             activeCharId={activeCharId}
