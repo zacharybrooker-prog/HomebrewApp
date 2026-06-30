@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
+import { CampaignStore, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
 import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
 import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon } from 'lucide-react';
@@ -32,8 +32,6 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
-  const [lanTarget, setLanTarget] = useState(`ws://localhost:3000/ws/campaign`);
-  
   const [schema, setSchema] = useState<StatFieldDef[]>([]);
 
   const [timeState, setTimeState] = useState<TimeState>({ blocks: 0 });
