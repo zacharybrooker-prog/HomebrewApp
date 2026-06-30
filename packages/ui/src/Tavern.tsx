@@ -97,7 +97,7 @@ export function Tavern({ store, role, activeCharId, characterProfiles, onExit }:
       </div>
 
       {/* Chat Feed */}
-      <div ref={feedRef} className="relative z-10 flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar">
+      <div ref={feedRef} className="relative z-10 flex-1 overflow-y-auto p-4 flex flex-col gap-4 tavern-scrollbar">
         {messages.length === 0 && (
           <div className="m-auto text-center p-8 bg-black/40 backdrop-blur-sm rounded-lg border border-[#3e2723] shadow-xl max-w-sm">
             <h3 className="text-amber-200 font-serif text-lg mb-2">The hearth is quiet...</h3>

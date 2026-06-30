@@ -764,7 +764,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       )}
 
       {activeTab === 'tavern' && (
-        <div className="w-full min-h-[100dvh] bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
+        <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
           <Tavern store={store} role={role!} activeCharId={activeCharId} characterProfiles={characterProfiles} onExit={() => setActiveTab(null as any)} />
         </div>
       )}

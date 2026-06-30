@@ -1751,3 +1751,22 @@ body.theme-blood-moon {
   }
 }
 
+/* --- Tavern Custom Scrollbar --- */
+.tavern-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  background-color: transparent;
+}
+.tavern-scrollbar::-webkit-scrollbar-track {
+  background: rgba(45, 27, 21, 0.4);
+  border-left: 1px solid rgba(62, 39, 35, 0.5);
+}
+.tavern-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #5d4037 0%, #3e2723 100%);
+  border: 1px solid #8d6e63;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(215, 204, 200, 0.2);
+}
+.tavern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #795548 0%, #4e342e 100%);
+  border-color: #a1887f;
+}
