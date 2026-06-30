@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { CampaignStore, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
+import { CampaignStore, formatCalendarDate, calculateDate } from '@frogs-world/shared';
+import { FirebaseProvider } from '@frogs-world/shared/src/sync/FirebaseProvider';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
 import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
 import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon } from 'lucide-react';
@@ -403,17 +404,23 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
   useEffect(() => {
     let isMounted = true;
+    let provider: FirebaseProvider | null = null;
     
-    const connectToCloud = () => {
+    const handleCampaignNotFound = () => {
+      alert("Campaign not found or you do not have access. Please check the code.");
+      window.location.reload();
+    };
+    
+    window.addEventListener('campaign-not-found', handleCampaignNotFound);
+    
+    const connectToCloud = async () => {
       try {
-        const provider = new CloudProvider({
-          doc: store.doc,
-          url: 'wss://demos.yjs.dev/ws', // Unused in PeerJsProvider
+        provider = new FirebaseProvider(
+          db,
           campaignId,
-          role: role || 'player',
-          participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
-          token: 'placeholder-jwt'
-        });
+          store.doc,
+          role === 'dm'
+        );
         
         if (isMounted) {
           setSyncStatus('connecting');
@@ -423,7 +430,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
           provider.disconnect();
         }
       } catch (e) {
-        console.error('Cloud Connect Error:', e);
+        console.error('Firebase Connect Error:', e);
       }
     };
 
@@ -431,9 +438,10 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
     return () => {
       isMounted = false;
+      window.removeEventListener('campaign-not-found', handleCampaignNotFound);
       store.disconnectSync();
     };
-  }, [campaignId, store, role, activeCharId]);
+  }, [campaignId, store, role]);
 
   const BLOCK_MS = 6 * 60 * 60 * 1000;
   const currentVisualBlock = Math.floor(visualTimeMs / BLOCK_MS);
