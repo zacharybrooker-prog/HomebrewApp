@@ -93,6 +93,32 @@ export class CampaignStore {
     this.getSharedMap().set('locationName', name);
   }
 
+  public clearLog() {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    this.getSharedMap().set('rolls', []);
+  }
+
+  // ================= Tavern Chat =================
+
+  public getChatMessages(): any[] {
+    const shared = this.getSharedMap();
+    return shared.get('chatMessages') || [];
+  }
+
+  public sendChatMessage(message: Omit<any, 'id' | 'timestamp'>) {
+    const shared = this.getSharedMap();
+    const messages = shared.get('chatMessages') || [];
+    const newMessage = {
+      ...message,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: Date.now()
+    };
+    
+    // Add new message and slice to keep only the last 150 messages
+    const updatedMessages = [...messages, newMessage].slice(-150);
+    shared.set('chatMessages', updatedMessages);
+  }
+
   // --- Settings ---
   public getSettings(): { strictSpells: boolean } {
     const defaultSettings = { strictSpells: true };

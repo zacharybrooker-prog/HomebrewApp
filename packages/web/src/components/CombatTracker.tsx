@@ -326,7 +326,7 @@ export function CombatTracker({ role, combatState, monsterTemplates, onStart, on
                           <button onClick={() => onUpdateHp(c.id, Math.min(c.hp.max, c.hp.current + 1), c.hp.max)} 
                             className="btn-ghost" style={{ padding: '2px 10px', fontSize: '11px', color: 'var(--success, #22c55e)' }}>+1 HP</button>
                         </div>
-                        <StatusList statuses={c.statuses} />
+                        <StatusList statuses={c.statuses as any[]} />
 
                         {/* Add Condition Dropdown */}
                         <div className="mt-2 flex items-center gap-2">

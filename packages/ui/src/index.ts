@@ -8,3 +8,4 @@ export * from './lobby';
 export * from './Landing';
 export * from './ConditionPopover';
 export * from './TraditionalSheet';
+export * from './Tavern';

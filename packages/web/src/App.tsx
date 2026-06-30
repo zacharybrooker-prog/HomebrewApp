@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
 import { CampaignStore, LocalProvider, CloudProvider, formatCalendarDate, calculateDate } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
-import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet } from '@frogs-world/ui';
-import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon } from 'lucide-react';
+import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
+import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon } from 'lucide-react';
 
 const User = UserIcon as any;
 const Scroll = ScrollIcon as any;
 const Wand2 = Wand2Icon as any;
 const BookOpen = BookOpenIcon as any;
 const CalendarDays = CalendarDaysIcon as any;
+const Beer = BeerIcon as any;
 import { auth, db } from './firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
@@ -27,7 +28,7 @@ import { useClassFeatures } from './hooks/useClassFeatures';
 
 export function GameApp({ store, initialRole, campaignId, initialCharacterId, initialCharacterData }: { store: CampaignStore, initialRole: 'dm' | 'player', campaignId: string, initialCharacterId?: string, initialCharacterData?: any }) {
   const [role, setRole] = useState<'dm' | 'player' | null>(initialRole);
-  const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'bestiary' | 'events' | 'calendar' | 'journal' | 'settings' | 'map' | 'inventory' | 'mount' | 'abilities' | 'botany' | 'spells' | 'items' | 'equipment' | 'curses' | 'diseases' | 'recipes' | 'glossary' | 'feats'>('sheet');
+  const [activeTab, setActiveTab] = useState<'sheet' | 'combat' | 'bestiary' | 'events' | 'calendar' | 'journal' | 'tavern' | 'settings' | 'map' | 'inventory' | 'mount' | 'abilities' | 'botany' | 'spells' | 'items' | 'equipment' | 'curses' | 'diseases' | 'recipes' | 'glossary' | 'feats'>('sheet');
 
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
@@ -43,6 +44,8 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
   const [showSettings, setShowSettings] = useState(false);
   const [feed, setFeed] = useState<{id: string, message: string}[]>([]);
   const [settings, setSettings] = useState<{ strictSpells: boolean }>({ strictSpells: true });
+  const [unreadTavern, setUnreadTavern] = useState(false);
+  const tavernCountRef = useRef(0);
 
   // Inventory UI State
   const [showExtraPlanar, setShowExtraPlanar] = useState(false);
@@ -216,6 +219,26 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       store.provider.off('synced', handleSynced);
     };
   }, [store]);
+
+  // Tavern Unread tracking
+  useEffect(() => {
+    if (!store) return;
+    const updateUnread = () => {
+      const msgs = store.getChatMessages();
+      if (activeTab === 'tavern') {
+        tavernCountRef.current = msgs.length;
+        setUnreadTavern(false);
+      } else {
+        if (msgs.length > tavernCountRef.current) {
+          setUnreadTavern(true);
+        }
+      }
+    };
+    // Sync when component loads
+    updateUnread();
+    store.doc.on('update', updateUnread);
+    return () => store.doc.off('update', updateUnread);
+  }, [store, activeTab]);
 
   const [locationName, setLocationName] = useState('Unknown Location');
   const [visualTimeMs, setVisualTimeMs] = useState(0);
@@ -446,7 +469,8 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
     curses: '🩸',
     diseases: '🦠',
     recipes: '🧪',
-    feats: '⭐'
+    feats: '⭐',
+    tavern: '🍺'
   };
 
   if (role === null || (role === 'player' && !activeCharId)) {
@@ -454,7 +478,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       <ThemeProvider phaseIndex={currentVisualBlock % 4}>
         <div className="w-full min-h-screen flex flex-col items-center p-4">
           <Lobby 
-            characters={characterProfiles}
+            characters={characterProfiles as any[]}
             onSelectCharacter={id => { setActiveCharId(id); setRole('player'); setActiveTab('sheet'); }}
             onJoinAsDM={() => { setRole('dm'); setActiveTab('combat'); }}
             onCreateCharacter={(name, charClass, ac, init, maxHp) => {
@@ -641,9 +665,9 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
           <Journal 
             role={role}
             activeCharId={activeCharId}
-            notes={notes}
-            handouts={handouts}
-            revealedHandouts={revealedHandouts}
+            notes={notes as any[]}
+            handouts={handouts as any[]}
+            revealedHandouts={revealedHandouts as any[]}
             onSaveNote={(note) => store.saveNote(note)}
             onDeleteNote={(id) => store.deleteNote(id)}
             onSaveHandout={(handout) => store.saveHandout(handout)}
@@ -688,7 +712,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
               firstDayOfWeekIndex={firstDayOfWeekIndex}
               totalDaysPassedAtMonthStart={daysPassedForViewedStart}
               events={calendarEvents}
-              moons={calendarConfig.moons}
+              moons={calendarConfig.moons as any}
               onAddEvent={(offset, evt) => { try { store.addCalendarEvent(offset, evt); } catch(e:any){alert(e.message);} }}
               onRemoveEvent={(offset, idx) => { try { store.removeCalendarEvent(offset, idx); } catch(e:any){alert(e.message);} }}
               onExit={() => setActiveTab(null as any)}
@@ -739,7 +763,13 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
         </div>
       )}
 
-      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && activeTab !== 'spells' && (
+      {activeTab === 'tavern' && (
+        <div className="w-full min-h-[100dvh] bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
+          <Tavern store={store} role={role!} activeCharId={activeCharId} characterProfiles={characterProfiles} onExit={() => setActiveTab(null as any)} />
+        </div>
+      )}
+
+      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && activeTab !== 'spells' && activeTab !== 'tavern' && (
       <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
@@ -884,8 +914,8 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
           <div className="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-3">
             {(role === 'dm' 
-              ? ['sheet', 'combat', 'events', 'calendar', 'journal', 'map', 'inventory', 'mount', 'abilities', 'glossary', 'settings']
-              : ['sheet', 'combat', 'calendar', 'journal', 'map', 'inventory', 'mount', 'abilities', 'glossary', 'settings']
+              ? ['sheet', 'combat', 'events', 'calendar', 'tavern', 'journal', 'map', 'inventory', 'mount', 'abilities', 'glossary', 'settings']
+              : ['sheet', 'combat', 'calendar', 'tavern', 'journal', 'map', 'inventory', 'mount', 'abilities', 'glossary', 'settings']
             ).map(tab => (
               <button 
                 key={tab}
@@ -976,10 +1006,10 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
           {/* ── Global Item Manager Modal ── */}
           {showItemManager && (
             <ItemManager 
-              characters={characterProfiles}
+              characters={characterProfiles as any[]}
               currentPlayerId={activeCharId || undefined}
-              catalogItems={store.getItemTemplates()}
-              schema={Array.isArray(schema) ? schema : []}
+              catalogItems={store.getItemTemplates() as any[]}
+              schema={Array.isArray(schema) ? schema as any[] : []}
               onClose={() => setShowItemManager(false)}
               onAddItem={(template, recipientId) => store.addItemToInventory(recipientId, template)}
               onCreateItem={(template, recipientId) => {
@@ -1224,27 +1254,38 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
             </div>
           )}
 
-      <div className="fixed bottom-0 left-0 right-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.95)]" style={{ backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderTop: '4px solid #450a0a' }}>
-        <button onClick={() => setActiveTab(null as any)} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${!activeTab ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+      <div className="fixed bottom-0 left-0 right-0 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.95)]" style={{ backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderTop: '4px solid #450a0a' }}>
+        <div className="flex justify-around items-center w-full max-w-4xl mx-auto pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2">
+        <button onClick={() => setActiveTab(null as any)} className={`flex flex-col items-center gap-1 p-1 sm:p-2 min-w-0 flex-1 rounded-lg transition-all ${!activeTab ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <User size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Overview</span>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest truncate w-full text-center">Overview</span>
         </button>
-        <button onClick={() => setActiveTab('sheet')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'sheet' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+        <button onClick={() => setActiveTab('sheet')} className={`flex flex-col items-center gap-1 p-1 sm:p-2 min-w-0 flex-1 rounded-lg transition-all ${activeTab === 'sheet' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <Scroll size={24} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Sheet</span>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest truncate w-full text-center">Sheet</span>
         </button>
-        <button onClick={() => setActiveTab('spells')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'spells' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+        <button onClick={() => setActiveTab('spells')} className={`flex flex-col items-center gap-1 p-1 sm:p-2 min-w-0 flex-1 rounded-lg transition-all ${activeTab === 'spells' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <Wand2 size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Spells</span>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest truncate w-full text-center">Spells</span>
         </button>
-        <button onClick={() => setActiveTab('journal')} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'journal' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+        <button onClick={() => setActiveTab('journal')} className={`flex flex-col items-center gap-1 p-1 sm:p-2 min-w-0 flex-1 rounded-lg transition-all ${activeTab === 'journal' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <BookOpen size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Journal</span>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest truncate w-full text-center">Journal</span>
         </button>
-        <button onClick={() => { setActiveTab('calendar'); setCalendarViewOffset(0); }} className={`flex flex-col items-center gap-1 p-2 w-full rounded-lg transition-all ${activeTab === 'calendar' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
+        <button onClick={() => { setActiveTab('calendar'); setCalendarViewOffset(0); }} className={`flex flex-col items-center gap-1 p-1 sm:p-2 min-w-0 flex-1 rounded-lg transition-all ${activeTab === 'calendar' ? 'text-yellow-500 bg-stone-900/30' : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50'}`}>
           <CalendarDays size={20} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">Calendar</span>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest truncate w-full text-center">Calendar</span>
         </button>
+        <button onClick={() => setActiveTab('tavern')} className={`relative flex flex-col items-center gap-1 p-1 sm:p-2 min-w-0 flex-1 rounded-lg transition-all ${activeTab === 'tavern' ? 'text-amber-500 bg-[#3e2723]/60' : 'text-stone-500 hover:text-[#d7ccc8] hover:bg-[#3e2723]/30'}`}>
+          <div className="relative">
+            <Beer size={20} />
+            {unreadTavern && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full border border-[#2d1b15] shadow-[0_0_8px_rgba(220,38,38,0.8)] animate-pulse" />
+            )}
+          </div>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest truncate w-full text-center">Tavern</span>
+        </button>
+        </div>
       </div>
     </ThemeProvider>
   );

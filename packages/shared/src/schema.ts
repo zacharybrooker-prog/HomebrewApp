@@ -484,3 +484,15 @@ export const RollLogEntrySchema = z.object({
   rolledAt: z.string(),
 });
 export type RollLogEntry = z.infer<typeof RollLogEntrySchema>;
+
+// 7.11 Chat Messages
+export const ChatMessageSchema = z.object({
+  id: z.string(),
+  authorId: z.string(),
+  authorName: z.string(),
+  characterId: z.string().optional(),
+  isIC: z.boolean(),
+  content: z.string(),
+  timestamp: z.number(),
+});
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;

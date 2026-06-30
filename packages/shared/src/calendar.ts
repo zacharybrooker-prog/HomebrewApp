@@ -84,7 +84,7 @@ export function calculateMoonPhases(totalDaysPassed: number, moons?: MoonConfig[
     if (phaseIndex >= 8) phaseIndex = 7;
     if (phaseIndex < 0) phaseIndex = 0;
     
-    const phaseName = moon.customPhases?.[phaseIndex] || STANDARD_MOON_PHASES[phaseIndex];
+    const phaseName = (moon.customPhases?.[phaseIndex] || STANDARD_MOON_PHASES[phaseIndex]) as string;
     
     return {
       config: moon,
