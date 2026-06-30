@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
-import type { SyncProvider, SyncProviderConfig } from '../sync';
+import type { SyncProvider } from '../sync';
 
 function uint8ArrayToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -22,20 +22,29 @@ function base64ToUint8Array(base64: string): Uint8Array {
 }
 
 export class FirebaseProvider implements SyncProvider {
-  private updateHandler: (update: Uint8Array, origin: any) => void;
+  private updateHandler: (_update: Uint8Array, origin: any) => void;
   private unsubscribe: (() => void) | null = null;
-  private isWriting = false;
   private timeoutId: any;
   private statusCallbacks: Set<(status: 'connecting' | 'connected' | 'disconnected') => void> = new Set();
   private status: 'connecting' | 'connected' | 'disconnected' = 'disconnected';
 
+  private db: any;
+  private campaignId: string;
+  private ydoc: Y.Doc;
+  private isHost: boolean;
+
   constructor(
-    private db: any, // Firestore instance passed from web package
-    private campaignId: string,
-    private ydoc: Y.Doc,
-    private isHost: boolean
+    db: any, // Firestore instance passed from web package
+    campaignId: string,
+    ydoc: Y.Doc,
+    isHost: boolean
   ) {
-    this.updateHandler = (update: Uint8Array, origin: any) => {
+    this.db = db;
+    this.campaignId = campaignId;
+    this.ydoc = ydoc;
+    this.isHost = isHost;
+
+    this.updateHandler = (_update: Uint8Array, origin: any) => {
       if (origin === this) return; // Ignore our own remote updates
       this.debouncedSave();
     };
@@ -55,7 +64,6 @@ export class FirebaseProvider implements SyncProvider {
   }
 
   private async saveToFirestore() {
-    this.isWriting = true;
     try {
       const state = Y.encodeStateAsUpdate(this.ydoc);
       const base64 = uint8ArrayToBase64(state);
@@ -64,8 +72,6 @@ export class FirebaseProvider implements SyncProvider {
       await setDoc(docRef, { state: base64, lastUpdated: Date.now() }, { merge: true });
     } catch (e) {
       console.error('Failed to save campaign to Firebase:', e);
-    } finally {
-      this.isWriting = false;
     }
   }
 

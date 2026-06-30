@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "firebase": "^12.14.0",
     "peerjs": "^1.5.5",
     "y-indexeddb": "^9.0.12",
     "y-websocket": "^2.0.4",

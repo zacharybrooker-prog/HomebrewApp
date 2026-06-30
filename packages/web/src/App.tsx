@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { CampaignStore, formatCalendarDate, calculateDate } from '@frogs-world/shared';
-import { FirebaseProvider } from '@frogs-world/shared/src/sync/FirebaseProvider';
+import { CampaignStore, formatCalendarDate, calculateDate, FirebaseProvider } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
 import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
 import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon } from 'lucide-react';
