@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { CampaignStore, formatCalendarDate, calculateDate, FirebaseProvider } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
 import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
-import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon } from 'lucide-react';
+import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon, Menu as MenuIcon } from 'lucide-react';
 
 const User = UserIcon as any;
 const Scroll = ScrollIcon as any;
@@ -24,6 +24,7 @@ import { FeatsCompendium } from './components/FeatsCompendium';
 
 import { CsvImporter } from './components/CsvImporter';
 import { Vault } from './components/Vault';
+import GlobalNavMenu from './components/GlobalNavMenu';
 import { useClassFeatures } from './hooks/useClassFeatures';
 
 export function GameApp({ store, initialRole, campaignId, initialCharacterId, initialCharacterData }: { store: CampaignStore, initialRole: 'dm' | 'player', campaignId: string, initialCharacterId?: string, initialCharacterData?: any }) {
@@ -35,6 +36,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
   const [schema, setSchema] = useState<StatFieldDef[]>([]);
 
   const [timeState, setTimeState] = useState<TimeState>({ blocks: 0 });
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
 
 
@@ -494,11 +496,29 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
   return (
     <ThemeProvider phaseIndex={currentVisualBlock % 4}>
+      <GlobalNavMenu 
+        isOpen={isNavMenuOpen} 
+        onClose={() => setIsNavMenuOpen(false)} 
+        role={role} 
+        onNavigate={(tab) => {
+          if (tab === 'glossary') setIsGlossaryOpen(true);
+          else if (tab === 'home') setActiveTab('home' as any);
+          else setActiveTab(tab as any);
+        }} 
+        activeTab={activeTab} 
+      />
       {activeTab !== 'sheet' && (
       <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.9)]" style={{ height: '80px', backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderBottom: '4px solid #450a0a' }}>
         {/* Left Zone: Location, Time & Title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="flex items-center gap-3 shrink-0">
+            <button 
+              onClick={() => setIsNavMenuOpen(true)}
+              className="text-white hover:text-yellow-500 p-2 -ml-2 transition-colors drop-shadow-md"
+              aria-label="Open Navigation Menu"
+            >
+              <MenuIcon size={28} />
+            </button>
             {role === 'dm' ? (
               <input 
                 className="bg-transparent text-white border-b border-white/20 focus:outline-none focus:border-accent text-sm w-32"
@@ -578,7 +598,14 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       )}
 
       {activeTab === 'sheet' && (
-        <div className="w-full min-h-screen bg-stone-950 pb-[80px]">
+        <div className="w-full min-h-screen bg-stone-950 pb-[80px] relative">
+          <button 
+            onClick={() => setIsNavMenuOpen(true)}
+            className="absolute top-4 left-4 z-[2000] text-white hover:text-yellow-500 bg-stone-900/80 p-3 rounded-full border border-yellow-700/50 shadow-[0_0_15px_rgba(0,0,0,0.8)] backdrop-blur-sm transition-all hover:scale-110"
+            aria-label="Open Navigation Menu"
+          >
+            <MenuIcon size={24} />
+          </button>
           {role === 'dm' && (
             <div className="p-4 bg-stone-900 border-b border-yellow-700/50">
               <div className="flex justify-between items-center max-w-6xl mx-auto">
