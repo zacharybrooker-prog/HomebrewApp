@@ -403,46 +403,39 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
     });
   };
 
-  const handleConnectLan = () => {
-    try {
-      const provider = new LocalProvider({
-        doc: store.doc,
-        url: lanTarget,
-        campaignId,
-        role: role || 'player',
-        participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
-        token: role === 'dm' ? 'mock-dm' : 'mock-player'
-      });
-      setSyncStatus('connecting');
-      provider.onStatusChange(setSyncStatus);
-      store.connectSync(provider);
-    } catch (e) {
-      console.error('LAN Connect Error:', e);
-    }
-  };
+  useEffect(() => {
+    let isMounted = true;
+    
+    const connectToCloud = () => {
+      try {
+        const provider = new CloudProvider({
+          doc: store.doc,
+          url: 'wss://demos.yjs.dev/ws', // Unused in PeerJsProvider
+          campaignId,
+          role: role || 'player',
+          participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
+          token: 'placeholder-jwt'
+        });
+        
+        if (isMounted) {
+          setSyncStatus('connecting');
+          provider.onStatusChange(setSyncStatus);
+          store.connectSync(provider);
+        } else {
+          provider.disconnect();
+        }
+      } catch (e) {
+        console.error('Cloud Connect Error:', e);
+      }
+    };
 
-  const handleConnectCloud = () => {
-    try {
-      const provider = new CloudProvider({
-        doc: store.doc,
-        url: 'wss://demos.yjs.dev/ws',
-        campaignId,
-        role: role || 'player',
-        participantId: activeCharId || `user-${Math.random().toString(36).substring(2, 9)}`,
-        token: 'placeholder-jwt'
-      });
-      setSyncStatus('connecting');
-      provider.onStatusChange(setSyncStatus);
-      store.connectSync(provider);
-    } catch (e) {
-      console.error('Cloud Connect Error:', e);
-    }
-  };
+    connectToCloud();
 
-  const handleDisconnect = () => {
-    store.disconnectSync();
-    setSyncStatus('disconnected');
-  };
+    return () => {
+      isMounted = false;
+      store.disconnectSync();
+    };
+  }, [campaignId, store, role, activeCharId]);
 
   const BLOCK_MS = 6 * 60 * 60 * 1000;
   const currentVisualBlock = Math.floor(visualTimeMs / BLOCK_MS);
@@ -884,32 +877,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
                   </div>
                 </div>
               </div>
-              {syncStatus !== 'connected' ? (
-                <div className="flex gap-2">
-                  <button onClick={handleConnectLan} className="btn-fantasy min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
-                    Connect LAN
-                  </button>
-                  <button onClick={handleConnectCloud} className="btn-gold min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
-                    Connect Cloud
-                  </button>
-                </div>
-              ) : (
-                <button onClick={handleDisconnect} className="btn-danger min-h-[44px]" style={{ padding: '0.35rem 0.75rem', fontSize: '0.7rem' }}>
-                  Disconnect
-                </button>
-              )}
             </div>
-            {syncStatus !== 'connected' && (
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="text" 
-                  value={lanTarget} 
-                  onChange={e => setLanTarget(e.target.value)} 
-                  className="input-fantasy text-xs flex-1" 
-                  placeholder="ws://ip:port/campaign/id"
-                />
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-3 gap-3">
