@@ -226,8 +226,80 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
     }
   };
 
+  const getFallbackImage = (typeStr: string) => {
+    const t = String(typeStr).toLowerCase();
+    if (t.includes('aberration')) return '/monster_types/aberration.png';
+    if (t.includes('beast')) return '/monster_types/beast.png';
+    if (t.includes('celestial')) return '/monster_types/celestial.png';
+    if (t.includes('construct')) return '/monster_types/construct.png';
+    if (t.includes('dragon')) return '/monster_types/dragon.png';
+    if (t.includes('elemental')) return '/monster_types/elemental.png';
+    if (t.includes('fey')) return '/monster_types/fey.png';
+    if (t.includes('fiend')) return '/monster_types/fiend.png';
+    if (t.includes('giant')) return '/monster_types/giant.png';
+    if (t.includes('humanoid')) return '/monster_types/humanoid.png';
+    if (t.includes('monstrosity')) return '/monster_types/monstrosity.png';
+    if (t.includes('ooze')) return '/monster_types/ooze.png';
+    if (t.includes('plant')) return '/monster_types/plant.png';
+    if (t.includes('undead')) return '/monster_types/undead.png';
+    return '/monster_types/monstrosity.png';
+  };
+
+  const ITEMS_PER_PAGE = 24; // 24 cards fits nicely (e.g. 4x6 grid)
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const currentItems = filteredItems.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
+
   return (
-    <div className="w-full flex flex-col items-center animate-fade-in-up pb-20">
+    <div className="flex flex-col gap-6 animate-fade-in-up h-full max-w-7xl mx-auto w-full">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white uppercase tracking-wider m-0">Bestiary Compendium</h2>
+      </div>
+
+      {/* TYPE TABS */}
+      <div className="flex items-center bg-[#1A1A1A] p-2 rounded-lg border border-[#2a2a2a] overflow-x-auto custom-scrollbar">
+        {['All', 'Aberration', 'Beast', 'Celestial', 'Construct', 'Dragon', 'Elemental', 'Fey', 'Fiend', 'Giant', 'Humanoid', 'Monstrosity', 'Ooze', 'Plant', 'Undead'].map(t => (
+          <button
+            key={t}
+            onClick={() => {
+              setFilterType(t === 'All' ? '' : t);
+              setCurrentPage(1);
+            }}
+            className={`flex-none px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
+              (filterType === t || (t === 'All' && !filterType)) ? 'text-accent border-accent bg-[#242424]' : 'text-gray-500 border-transparent hover:text-gray-300'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* HEADER CONTROLS */}
+      <div className="glass-panel p-4 flex flex-col md:flex-row gap-4 justify-between items-center z-10" style={{ backgroundColor: '#121212' }}>
+        <div className="flex gap-2 w-full md:w-auto flex-wrap">
+          <input 
+            type="text" 
+            placeholder="Search bestiary..." 
+            className="input-fantasy min-w-[200px]"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+          />
+          <select className="input-fantasy" value={filterCR} onChange={e => { setFilterCR(e.target.value); setCurrentPage(1); }}>
+            <option value="">All CR</option>
+            {uniqueCRs.map(c => <option key={c} value={c}>CR {c}</option>)}
+          </select>
+          <select className="input-fantasy" value={filterSize} onChange={e => { setFilterSize(e.target.value); setCurrentPage(1); }}>
+            <option value="">All Sizes</option>
+            {uniqueSizes.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        
+        {role === 'dm' && (
+          <button className="btn-fantasy whitespace-nowrap">
+            + Add Custom Monster
+          </button>
+        )}
+      </div>
       
       {/* HEADER CONTROLS */}
       <div className="w-full max-w-5xl sticky top-[70px] z-[50] p-4 mb-4 rounded-b-xl border-x border-b shadow-lg glass-panel flex flex-col gap-3" 
@@ -275,84 +347,99 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
         </div>
       </div>
 
-      {/* ITEMS LIST */}
-      <div className="w-full max-w-5xl flex flex-col gap-2 px-2">
-        {currentItems.map(item => (
-          <div 
-            key={item.id} 
-            onClick={() => setSelectedItem(item)}
-            className={`flex justify-between items-center px-4 py-3 cursor-pointer select-none rounded-lg bg-[#161618]/70 backdrop-blur-md border-b border-[#b8860b]/15 border-l-[3px] border-l-transparent transition-all duration-300 ease-out hover:translate-x-1 hover:border-[var(--accent)] hover:shadow-[0_0_15px_rgba(225,29,72,0.2)]`}
-          >
-            {/* Left Section */}
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 shrink-0 flex justify-center items-center rounded-full bg-black/60 shadow-[inset_0_0_8px_rgba(0,0,0,0.8)] border border-[var(--border-accent)] overflow-hidden relative">
-                {item.imgUrl ? (
-                  <img src={item.imgUrl} alt={item.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xl">💀</span>
-                )}
-              </div>
-              <div className="flex flex-col justify-center">
-                <span className="font-heading font-semibold text-gray-100 text-md truncate max-w-[200px] sm:max-w-[300px] md:max-w-[400px] flex items-center gap-2">
-                  {item.name}
+      {/* LIST RENDERING */}
+      <div className="glass-panel p-0 flex flex-col flex-1 relative overflow-hidden" style={{ minHeight: '500px' }}>
+        <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {currentItems.map(item => (
+              <div 
+                key={item.id} 
+                onClick={() => setSelectedItem(item)}
+                className={`flex flex-col cursor-pointer select-none rounded-xl bg-[#161618] border border-white/5 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_10px_20px_rgba(225,29,72,0.2)]`}
+              >
+                {/* Card Image Header */}
+                <div className="w-full aspect-[4/3] bg-black relative overflow-hidden">
+                  <img 
+                    src={item.imgUrl || getFallbackImage(String(item.type))} 
+                    alt={item.name} 
+                    className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" 
+                  />
+                  {/* CR Badge */}
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-black/80 backdrop-blur border border-[var(--border-accent)] rounded text-[10px] font-bold text-secondary tracking-widest uppercase">
+                    CR {String(item.cr || '').split(' ')[0]}
+                  </div>
+                  {/* Hidden Badge */}
                   {role === 'dm' && !item.isRevealed && (
-                    <span className="text-[10px] bg-red-900/50 text-red-400 border border-red-700/50 px-1 rounded-sm uppercase tracking-widest">Hidden</span>
+                    <div className="absolute top-2 left-2 bg-red-900/80 backdrop-blur text-red-300 border border-red-700 px-2 py-1 rounded text-[10px] uppercase tracking-widest">
+                      Hidden
+                    </div>
                   )}
-                </span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest truncate">
-                  {item.size} {item.type}, {item.alignment}
-                </span>
-              </div>
-            </div>
+                </div>
 
-            {/* Right Section */}
-            <div className="flex items-center gap-3">
-              {role === 'dm' && (
-                <button 
-                  onClick={(e) => toggleFogOfWar(e, item)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-black/50 border transition-colors text-sm ${item.isRevealed ? 'border-accent text-accent' : 'border-white/10 text-white/30 hover:border-white/30 hover:text-white/80'}`}
-                  title={item.isRevealed ? "Hide from players" : "Reveal to players"}
-                >
-                  {item.isRevealed ? "👁️" : "👁️‍🗨️"}
-                </button>
-              )}
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded-full border border-[var(--border-accent)] bg-black/50 text-[10px] font-bold uppercase tracking-widest text-secondary">
-                CR {String(item.cr || '').split(' ')[0]}
-              </span>
-            </div>
+                {/* Card Body */}
+                <div className="p-4 flex flex-col gap-1 relative">
+                  <div className="flex justify-between items-start gap-2">
+                    <h3 className="font-heading font-bold text-lg text-gray-100 leading-tight truncate" title={item.name}>
+                      {item.name}
+                    </h3>
+                    {role === 'dm' && (
+                      <button 
+                        onClick={(e) => toggleFogOfWar(e, item)}
+                        className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full bg-black/50 border transition-colors text-sm ${item.isRevealed ? 'border-accent text-accent' : 'border-white/10 text-white/30 hover:border-white/30 hover:text-white/80'}`}
+                        title={item.isRevealed ? "Hide from players" : "Reveal to players"}
+                      >
+                        {item.isRevealed ? "👁️" : "👁️‍🗨️"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-gray-400 uppercase tracking-widest truncate">
+                    {item.size} {item.type}
+                  </div>
+                  <div className="text-[11px] text-gray-500 italic truncate mt-1">
+                    {item.alignment}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-        {filteredItems.length === 0 && (
-          <div className="text-center text-muted-foreground py-10 italic border border-dashed border-white/10 rounded-lg">
-            No monsters found matching your criteria...
+          
+          {filteredItems.length === 0 && (
+            <div className="text-center text-muted-foreground py-20 italic">
+              No monsters found matching your filters.
+            </div>
+          )}
+        </div>
+        
+        {/* Pagination Controls */}
+        {filteredItems.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3 border-t border-[var(--border)] bg-black/60 backdrop-blur-md shrink-0">
+            <span className="text-sm text-muted-foreground hidden sm:block">
+              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of {filteredItems.length} monsters
+            </span>
+            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+              <button 
+                className="btn-fantasy py-1 px-4 text-sm disabled:opacity-30"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                Previous
+              </button>
+              
+              <div className="text-xs uppercase tracking-widest text-white font-bold font-mono">
+                {safePage} / {totalPages}
+              </div>
+              
+              <button 
+                className="btn-fantasy py-1 px-4 text-sm disabled:opacity-30"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
-
-      {/* PAGINATION */}
-      {filteredItems.length > 0 && (
-        <div className="flex items-center gap-4 mt-6 glass-panel px-4 py-2 border-[var(--border-accent)] rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-          <button 
-            disabled={safePage === 1} 
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            className="btn-ghost px-3 py-1 text-sm disabled:opacity-30"
-          >
-            ◀ Prev
-          </button>
-          
-          <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold font-mono min-w-[100px] text-center">
-            <span className="text-white">{safePage}</span> / {totalPages}
-          </div>
-          
-          <button 
-            disabled={safePage === totalPages} 
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            className="btn-ghost px-3 py-1 text-sm disabled:opacity-30"
-          >
-            Next ▶
-          </button>
-        </div>
-      )}
 
       {/* FLOATING CARD MODAL (5e Stat Block) */}
       {selectedItem && (
@@ -367,9 +454,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
               <button onClick={() => setSelectedItem(null)} className="absolute top-2 right-4 text-3xl font-sans font-bold opacity-50 hover:opacity-100">&times;</button>
               
               <div className="flex gap-4 items-center">
-                {selectedItem.imgUrl && (
-                  <img src={selectedItem.imgUrl} alt={selectedItem.name} className="w-24 h-24 rounded-lg object-cover border-2 border-[#58180d] shadow-md" />
-                )}
+                <img src={selectedItem.imgUrl || getFallbackImage(String(selectedItem.type))} alt={selectedItem.name} className="w-24 h-24 rounded-lg object-cover border-2 border-[#58180d] shadow-md" />
                 <div>
                   <h1 className="text-4xl font-bold font-heading text-[#58180d] mb-1 leading-none">{selectedItem.name}</h1>
                   <p className="italic text-sm text-[#000] opacity-80">{selectedItem.size} {selectedItem.type}, {selectedItem.alignment}</p>
