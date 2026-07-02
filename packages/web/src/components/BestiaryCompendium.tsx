@@ -93,7 +93,6 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
   const [items, setItems] = useState<BestiaryItem[]>([]);
   const [search, setSearch] = useState('');
   const [filterCR, setFilterCR] = useState('');
-  const [filterSize, setFilterSize] = useState('');
   const [filterType, setFilterType] = useState('');
   
   const [selectedItem, setSelectedItem] = useState<BestiaryItem | null>(null);
@@ -133,7 +132,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterCR, filterSize, filterType]);
+  }, [search, filterCR, filterType]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -143,12 +142,11 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
       if (search && !String(item.name).toLowerCase().includes(search.toLowerCase())) return false;
       
       if (filterCR && !String(item.cr).includes(filterCR)) return false;
-      if (filterSize && String(item.size).toLowerCase() !== filterSize.toLowerCase()) return false;
       if (filterType && String(item.type).toLowerCase() !== filterType.toLowerCase()) return false;
       
       return true;
     });
-  }, [items, search, filterCR, filterSize, filterType, role]);
+  }, [items, search, filterCR, filterType, role]);
 
   const uniqueCRs = useMemo(() => {
     // Extract CR strings, handle "1/4", "10", etc.
@@ -164,9 +162,6 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
       return numA - numB;
     });
   }, [items]);
-  
-  const uniqueSizes = useMemo(() => Array.from(new Set(items.map(i => String(i.size || '')))).sort(), [items]);
-  // const uniqueTypes = useMemo(() => Array.from(new Set(items.map(i => String(i.type || '')))).sort(), [items]);
 
 
   const toggleFogOfWar = async (e: React.MouseEvent, item: BestiaryItem) => {
@@ -240,270 +235,223 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
     return '/monster_types/monstrosity.png';
   };
 
-  const getSnippet = (item: BestiaryItem) => {
-    if ((item as any).flavorText) return (item as any).flavorText;
-    const raw = item.traits || item.actions || "";
-    const cleanText = raw.replace(/<[^>]*>?/gm, '');
-    if (cleanText.length > 160) return cleanText.substring(0, 160) + "...";
-    return cleanText || "No description available.";
-  };
-
   const ITEMS_PER_PAGE = 20; // 20 rows per page fits well
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
   const currentItems = filteredItems.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in-up h-full max-w-7xl mx-auto w-full">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white uppercase tracking-wider m-0">Bestiary Compendium</h2>
-      </div>
-
-      {/* TYPE TABS */}
-      <div className="flex items-center bg-[#1A1A1A] p-2 rounded-lg border border-[#2a2a2a] overflow-x-auto custom-scrollbar">
-        {['All', 'Aberration', 'Beast', 'Celestial', 'Construct', 'Dragon', 'Elemental', 'Fey', 'Fiend', 'Giant', 'Humanoid', 'Monstrosity', 'Ooze', 'Plant', 'Undead'].map(t => (
-          <button
-            key={t}
-            onClick={() => {
-              setFilterType(t === 'All' ? '' : t);
-              setCurrentPage(1);
-            }}
-            className={`flex-none px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 ${
-              (filterType === t || (t === 'All' && !filterType)) ? 'text-accent border-accent bg-[#242424]' : 'text-gray-500 border-transparent hover:text-gray-300'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* HEADER CONTROLS */}
-      <div className="glass-panel p-4 flex flex-col md:flex-row gap-4 justify-between items-center z-10" style={{ backgroundColor: '#121212' }}>
-        <div className="flex gap-2 w-full md:w-auto flex-wrap">
+    <div className="flex flex-col md:flex-row w-full h-full min-h-[60vh] max-w-7xl mx-auto rounded-lg overflow-hidden bg-[#121212] border border-[#2a2a2a] shadow-2xl font-sans text-gray-200">
+      
+      {/* LEFT COLUMN: Filters & Monster List */}
+      <div className={`w-full md:w-[350px] lg:w-[400px] flex flex-col bg-[#1A1A1A] border-r border-[#2a2a2a] md:min-h-[70vh] shadow-[inset_-10px_0_20px_rgba(0,0,0,0.5)] z-10 shrink-0 ${selectedItem ? 'hidden md:flex' : 'flex'}`}>
+        
+        {/* Header / Search Controls */}
+        <div className="p-4 bg-[#121212] border-b border-[#2a2a2a] flex flex-col gap-3 sticky top-0 z-20">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest m-0">Bestiary</h2>
+            {role === 'dm' && (
+              <button className="text-[10px] uppercase font-bold text-accent border border-accent/30 bg-accent/10 px-2 py-1 rounded hover:bg-accent hover:text-black transition-colors">
+                + Custom
+              </button>
+            )}
+          </div>
           <input 
             type="text" 
-            placeholder="Search bestiary..." 
-            className="input-fantasy min-w-[200px]"
+            placeholder="Search monsters..." 
+            className="w-full bg-[#1A1A1A] text-sm text-gray-200 border border-[#333] rounded px-3 py-2 outline-none focus:border-red-500 transition-colors placeholder:text-gray-600"
             value={search}
             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
           />
-          <select className="input-fantasy" value={filterCR} onChange={e => { setFilterCR(e.target.value); setCurrentPage(1); }}>
-            <option value="">All CR</option>
-            {uniqueCRs.map(c => <option key={c} value={c}>CR {c}</option>)}
-          </select>
-          <select className="input-fantasy" value={filterSize} onChange={e => { setFilterSize(e.target.value); setCurrentPage(1); }}>
-            <option value="">All Sizes</option>
-            {uniqueSizes.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        
-        {role === 'dm' && (
-          <button className="btn-fantasy whitespace-nowrap">
-            + Add Custom Monster
-          </button>
-        )}
-      </div>
-      
-
-      {/* LIST RENDERING */}
-      <div className="glass-panel p-0 flex flex-col flex-1 relative overflow-hidden" style={{ minHeight: '500px' }}>
-        <div className="grid grid-cols-[120px_1fr_60px_120px] gap-6 px-6 py-3 text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-[var(--border)] bg-black/40">
-          <div>Image</div>
-          <div>Monster Details</div>
-          <div>CR</div>
-          <div>Type</div>
-        </div>
-        <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-2">
-          <div className="flex flex-col">
-            {currentItems.map(item => (
-              <div 
-                key={item.id} 
-                onClick={() => setSelectedItem(item)}
-                className={`grid grid-cols-[120px_1fr_60px_120px] gap-6 px-4 py-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors items-center`}
-              >
-                {/* Image Cell */}
-                <div className="w-[120px] h-[120px] shrink-0 bg-black rounded-lg border border-white/10 overflow-hidden relative shadow-md">
-                  <img 
-                    src={item.imgUrl || getFallbackImage(String(item.type))} 
-                    alt={item.name} 
-                    className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" 
-                  />
-                  {role === 'dm' && !item.isRevealed && (
-                    <div className="absolute top-1 left-1 bg-red-900/80 backdrop-blur text-red-300 border border-red-700 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest">
-                      Hidden
-                    </div>
-                  )}
-                </div>
-
-                {/* Details Cell */}
-                <div className="flex flex-col gap-1 justify-center h-full pr-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-heading font-bold text-xl text-gray-100 leading-tight">
-                      {item.name}
-                    </h3>
-                    {role === 'dm' && (
-                      <button 
-                        onClick={(e) => toggleFogOfWar(e, item)}
-                        className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-black/50 border transition-colors text-xs ${item.isRevealed ? 'border-accent text-accent' : 'border-white/10 text-white/30 hover:border-white/30 hover:text-white/80'}`}
-                        title={item.isRevealed ? "Hide from players" : "Reveal to players"}
-                      >
-                        {item.isRevealed ? "👁️" : "👁️‍🗨️"}
-                      </button>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-400 leading-relaxed line-clamp-3 mt-1 italic opacity-80">
-                    {getSnippet(item)}
-                  </div>
-                </div>
-
-                {/* CR Cell */}
-                <div className="text-sm font-bold text-accent">
-                  CR {String(item.cr || '').split(' ')[0]}
-                </div>
-
-                {/* Type Cell */}
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm capitalize text-muted-foreground">{item.type}</span>
-                  <span className="text-[10px] uppercase tracking-widest text-gray-500">{item.size}</span>
-                </div>
-              </div>
-            ))}
-
+          <div className="flex gap-2">
+            <select className="flex-1 bg-[#1A1A1A] text-xs text-gray-300 border border-[#333] rounded px-2 py-1.5 outline-none focus:border-red-500" value={filterCR} onChange={e => { setFilterCR(e.target.value); setCurrentPage(1); }}>
+              <option value="">All CR</option>
+              {uniqueCRs.map(c => <option key={c} value={c}>CR {c}</option>)}
+            </select>
+            <select className="flex-1 bg-[#1A1A1A] text-xs text-gray-300 border border-[#333] rounded px-2 py-1.5 outline-none focus:border-red-500" value={filterType} onChange={e => { setFilterType(e.target.value); setCurrentPage(1); }}>
+              <option value="">All Types</option>
+              {['Aberration', 'Beast', 'Celestial', 'Construct', 'Dragon', 'Elemental', 'Fey', 'Fiend', 'Giant', 'Humanoid', 'Monstrosity', 'Ooze', 'Plant', 'Undead'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
+        </div>
+
+        {/* List of Monsters */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#1A1A1A]">
+          {currentItems.map(item => (
+            <button 
+              key={item.id} 
+              onClick={() => setSelectedItem(item)}
+              className={`w-full text-left p-3 border-b border-[#2a2a2a] transition-colors flex gap-3 items-center group relative ${
+                selectedItem?.id === item.id ? 'bg-[#242424] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500' : 'hover:bg-[#1a1a1a]'
+              }`}
+            >
+              <div className="w-12 h-12 shrink-0 bg-black rounded-md overflow-hidden relative border border-[#333] shadow-md">
+                <img src={item.imgUrl || getFallbackImage(String(item.type))} alt={item.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-0.5">
+                  <h3 className={`font-bold text-sm truncate ${selectedItem?.id === item.id ? 'text-red-400' : 'text-gray-200 group-hover:text-red-400'}`}>{item.name}</h3>
+                  <span className="text-[10px] font-bold text-accent shrink-0 ml-2">CR {String(item.cr || '').split(' ')[0]}</span>
+                </div>
+                <div className="text-[10px] text-gray-500 uppercase tracking-widest truncate">{item.size} {item.type}</div>
+              </div>
+              
+              {/* DM Fog of War Indicator */}
+              {role === 'dm' && !item.isRevealed && (
+                <div className="absolute top-1 right-1 text-[8px] bg-red-900/80 backdrop-blur text-red-200 px-1 rounded uppercase tracking-tighter">Hidden</div>
+              )}
+            </button>
+          ))}
           
           {filteredItems.length === 0 && (
-            <div className="text-center text-muted-foreground py-20 italic">
-              No monsters found matching your filters.
-            </div>
+            <div className="text-center text-gray-600 py-10 text-xs italic">No monsters found.</div>
           )}
-        </div>
-        
-        {/* Pagination Controls */}
-        {filteredItems.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3 border-t border-[var(--border)] bg-black/60 backdrop-blur-md shrink-0">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of {filteredItems.length} monsters
-            </span>
-            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+          
+          {/* List Pagination */}
+          {filteredItems.length > 0 && (
+            <div className="flex items-center justify-between p-3 border-t border-[#2a2a2a] bg-[#121212] sticky bottom-0 z-10 mt-auto">
               <button 
-                className="btn-fantasy py-1 px-4 text-sm disabled:opacity-30"
+                className="text-xs font-bold text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               >
-                Previous
+                &larr; PREV
               </button>
-              
-              <div className="text-xs uppercase tracking-widest text-white font-bold font-mono">
-                {safePage} / {totalPages}
-              </div>
-              
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest">{safePage} / {totalPages}</span>
               <button 
-                className="btn-fantasy py-1 px-4 text-sm disabled:opacity-30"
+                className="text-xs font-bold text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               >
-                Next
+                NEXT &rarr;
               </button>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Detail View */}
+      <div className={`flex-1 flex flex-col bg-[#121212] relative overflow-hidden ${!selectedItem ? 'hidden md:flex' : 'flex'}`}>
+        {!selectedItem ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-600">
+            <div className="text-6xl mb-4 opacity-10">🐉</div>
+            <p className="text-sm uppercase tracking-widest font-bold">Select a monster to view details</p>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pb-10">
+            
+            {/* Mobile Back Button */}
+            <div className="md:hidden sticky top-0 bg-[#121212] border-b border-[#2a2a2a] p-3 z-20 flex justify-between items-center shadow-lg">
+              <button onClick={() => setSelectedItem(null)} className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                &larr; Back to List
+              </button>
+            </div>
+
+            {/* Huge Header Banner */}
+            <div className="relative w-full h-64 sm:h-80 bg-black border-b border-[#2a2a2a] shrink-0">
+              <img src={selectedItem.imgUrl || getFallbackImage(String(selectedItem.type))} alt={selectedItem.name} className="w-full h-full object-cover opacity-60" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/40 to-transparent" />
+              
+              <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl sm:text-5xl font-heading font-bold text-white mb-2 drop-shadow-lg">{selectedItem.name}</h1>
+                  <p className="text-sm sm:text-base text-gray-300 uppercase tracking-widest font-bold opacity-80">{selectedItem.size} {selectedItem.type}, {selectedItem.alignment}</p>
+                </div>
+                {role === 'dm' && (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => toggleFogOfWar(e, selectedItem)}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${selectedItem.isRevealed ? 'border-gray-500 text-gray-400 hover:text-white' : 'bg-red-900/50 border-red-700 text-red-300 hover:bg-red-900'}`}
+                    >
+                      {selectedItem.isRevealed ? "Hide from Players" : "Reveal to Players"}
+                    </button>
+                    <button 
+                      onClick={handleAddToCombat} 
+                      className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded bg-red-600 text-white hover:bg-red-500 transition-colors shadow-lg"
+                    >
+                      + Combat
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Lore & Stat Block */}
+            <div className="p-6 sm:p-8 max-w-4xl mx-auto w-full">
+              {/* Lore Section */}
+              {(selectedItem as any).flavorText && (
+                <div className="mb-10 p-6 bg-[#1A1A1A] border border-[#2a2a2a] rounded-lg border-l-4 border-l-red-600 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 text-6xl">📖</div>
+                  <p className="italic text-gray-300 leading-relaxed font-serif text-lg relative z-10">
+                    "{(selectedItem as any).flavorText}"
+                  </p>
+                </div>
+              )}
+
+              {/* 5e Stat Block Styling */}
+              <div className="bg-[#fdf1dc] text-[#58180d] p-6 sm:p-8 rounded-lg shadow-2xl border-4 border-[#d6a053] font-serif" style={{ fontFamily: "'Georgia', serif" }}>
+                <h2 className="text-3xl font-bold font-heading text-[#58180d] mb-1 leading-tight">{selectedItem.name}</h2>
+                <p className="italic text-sm text-[#000] opacity-80 mb-4">{selectedItem.size} {selectedItem.type}, {selectedItem.alignment}</p>
+                
+                <hr className="border-[#d6a053] border-t-2 mb-4" />
+                
+                <div className="text-base mb-4 space-y-1">
+                  <p><strong>Armor Class</strong> {selectedItem.ac}</p>
+                  <p><strong>Hit Points</strong> {selectedItem.hp}</p>
+                  <p><strong>Speed</strong> {selectedItem.speed}</p>
+                </div>
+                
+                <hr className="border-[#d6a053] border-t-2 mb-4" />
+                
+                <div className="grid grid-cols-6 text-center text-sm mb-4">
+                  <div><strong className="text-lg">STR</strong><br/>{selectedItem.stats.str} {selectedItem.stats.str_mod}</div>
+                  <div><strong className="text-lg">DEX</strong><br/>{selectedItem.stats.dex} {selectedItem.stats.dex_mod}</div>
+                  <div><strong className="text-lg">CON</strong><br/>{selectedItem.stats.con} {selectedItem.stats.con_mod}</div>
+                  <div><strong className="text-lg">INT</strong><br/>{selectedItem.stats.int} {selectedItem.stats.int_mod}</div>
+                  <div><strong className="text-lg">WIS</strong><br/>{selectedItem.stats.wis} {selectedItem.stats.wis_mod}</div>
+                  <div><strong className="text-lg">CHA</strong><br/>{selectedItem.stats.cha} {selectedItem.stats.cha_mod}</div>
+                </div>
+                
+                <hr className="border-[#d6a053] border-t-2 mb-4" />
+                
+                <div className="text-sm mb-5 space-y-1.5">
+                  {selectedItem.savingThrows && <p><strong>Saving Throws</strong> {selectedItem.savingThrows}</p>}
+                  {selectedItem.skills && <p><strong>Skills</strong> {selectedItem.skills}</p>}
+                  {selectedItem.damageVulnerabilities && <p><strong>Damage Vulnerabilities</strong> {selectedItem.damageVulnerabilities}</p>}
+                  {selectedItem.damageResistances && <p><strong>Damage Resistances</strong> {selectedItem.damageResistances}</p>}
+                  {selectedItem.damageImmunities && <p><strong>Damage Immunities</strong> {selectedItem.damageImmunities}</p>}
+                  {selectedItem.conditionImmunities && <p><strong>Condition Immunities</strong> {selectedItem.conditionImmunities}</p>}
+                  {selectedItem.senses && <p><strong>Senses</strong> {selectedItem.senses}</p>}
+                  {selectedItem.languages && <p><strong>Languages</strong> {selectedItem.languages}</p>}
+                  <p className="text-base mt-2"><strong>Challenge</strong> {selectedItem.cr}</p>
+                </div>
+                
+                <hr className="border-[#d6a053] border-t-4 mb-5" />
+                
+                {selectedItem.traits && (
+                  <div className="mb-5 text-sm leading-relaxed prose prose-sm max-w-none text-[#58180d] marker:text-[#d6a053]" dangerouslySetInnerHTML={{ __html: selectedItem.traits }} />
+                )}
+                
+                {selectedItem.actions && (
+                  <>
+                    <h3 className="text-2xl font-bold font-heading mb-3 mt-8 border-b-2 border-[#d6a053] pb-1">Actions</h3>
+                    <div className="text-sm leading-relaxed space-y-3 prose prose-sm max-w-none text-[#58180d] marker:text-[#d6a053]" dangerouslySetInnerHTML={{ __html: selectedItem.actions }} />
+                  </>
+                )}
+                
+                {selectedItem.legendaryActions && (
+                  <>
+                    <h3 className="text-2xl font-bold font-heading mb-3 mt-8 border-b-2 border-[#d6a053] pb-1">Legendary Actions</h3>
+                    <div className="text-sm leading-relaxed space-y-3 prose prose-sm max-w-none text-[#58180d] marker:text-[#d6a053]" dangerouslySetInnerHTML={{ __html: selectedItem.legendaryActions }} />
+                  </>
+                )}
+              </div>
+            </div>
+            
           </div>
         )}
       </div>
 
-      {/* FLOATING CARD MODAL (5e Stat Block) */}
-      {selectedItem && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" onClick={() => setSelectedItem(null)}>
-          <div 
-            className="w-full max-w-2xl bg-[#fdf1dc] text-[#58180d] p-0 flex flex-col max-h-[90vh] shadow-[0_0_60px_rgba(0,0,0,1)] border-4 border-[#d6a053]"
-            style={{ fontFamily: "'Georgia', serif" }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header Area */}
-            <div className="p-6 pb-2 relative border-b-2 border-[#d6a053]">
-              <button onClick={() => setSelectedItem(null)} className="absolute top-2 right-4 text-3xl font-sans font-bold opacity-50 hover:opacity-100">&times;</button>
-              
-              <div className="flex gap-4 items-center">
-                <img src={selectedItem.imgUrl || getFallbackImage(String(selectedItem.type))} alt={selectedItem.name} className="w-24 h-24 rounded-lg object-cover border-2 border-[#58180d] shadow-md" />
-                <div>
-                  <h1 className="text-4xl font-bold font-heading text-[#58180d] mb-1 leading-none">{selectedItem.name}</h1>
-                  <p className="italic text-sm text-[#000] opacity-80">{selectedItem.size} {selectedItem.type}, {selectedItem.alignment}</p>
-                </div>
-              </div>
-
-              {role === 'dm' && (
-                <div className="mt-4 flex gap-2">
-                  <button onClick={handleAddToCombat} className="px-4 py-1.5 bg-[#58180d] text-[#fdf1dc] font-bold text-sm tracking-widest uppercase rounded hover:bg-[#852514] transition-colors shadow-sm font-sans">
-                    + Add to Combat
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[url('/parchment-texture.png')] bg-cover">
-              {/* Top Stats */}
-              <div className="text-sm border-b-2 border-[#d6a053] pb-3 mb-3">
-                <p><strong>Armor Class</strong> {selectedItem.ac}</p>
-                <p><strong>Hit Points</strong> {selectedItem.hp}</p>
-                <p><strong>Speed</strong> {selectedItem.speed}</p>
-              </div>
-
-              {/* 6 Core Stats */}
-              <div className="grid grid-cols-6 text-center text-sm mb-3 border-b-2 border-[#d6a053] pb-3">
-                <div><div className="font-bold">STR</div><div>{selectedItem.stats.str} {selectedItem.stats.str_mod}</div></div>
-                <div><div className="font-bold">DEX</div><div>{selectedItem.stats.dex} {selectedItem.stats.dex_mod}</div></div>
-                <div><div className="font-bold">CON</div><div>{selectedItem.stats.con} {selectedItem.stats.con_mod}</div></div>
-                <div><div className="font-bold">INT</div><div>{selectedItem.stats.int} {selectedItem.stats.int_mod}</div></div>
-                <div><div className="font-bold">WIS</div><div>{selectedItem.stats.wis} {selectedItem.stats.wis_mod}</div></div>
-                <div><div className="font-bold">CHA</div><div>{selectedItem.stats.cha} {selectedItem.stats.cha_mod}</div></div>
-              </div>
-
-              {/* Extra Stats */}
-              <div className="text-sm border-b-2 border-[#d6a053] pb-3 mb-4 space-y-1">
-                {selectedItem.savingThrows && <p><strong>Saving Throws</strong> {selectedItem.savingThrows}</p>}
-                {selectedItem.skills && <p><strong>Skills</strong> {selectedItem.skills}</p>}
-                {selectedItem.damageVulnerabilities && <p><strong>Damage Vulnerabilities</strong> {selectedItem.damageVulnerabilities}</p>}
-                {selectedItem.damageResistances && <p><strong>Damage Resistances</strong> {selectedItem.damageResistances}</p>}
-                {selectedItem.damageImmunities && <p><strong>Damage Immunities</strong> {selectedItem.damageImmunities}</p>}
-                {selectedItem.conditionImmunities && <p><strong>Condition Immunities</strong> {selectedItem.conditionImmunities}</p>}
-                {selectedItem.senses && <p><strong>Senses</strong> {selectedItem.senses}</p>}
-                {selectedItem.languages && <p><strong>Languages</strong> {selectedItem.languages}</p>}
-                <p><strong>Challenge</strong> {selectedItem.cr}</p>
-              </div>
-
-              {/* Traits (HTML) */}
-              {selectedItem.traits && (
-                <div 
-                  className="mb-4 text-sm leading-relaxed prose prose-sm max-w-none text-[#000]"
-                  dangerouslySetInnerHTML={{ __html: selectedItem.traits }}
-                />
-              )}
-
-              {/* Actions (HTML) */}
-              {selectedItem.actions && (
-                <div className="mb-4">
-                  <h3 className="text-2xl font-heading text-[#58180d] border-b border-[#d6a053] mb-2 pb-1">Actions</h3>
-                  <div 
-                    className="text-sm leading-relaxed prose prose-sm max-w-none text-[#000]"
-                    dangerouslySetInnerHTML={{ __html: selectedItem.actions }}
-                  />
-                </div>
-              )}
-
-              {/* Legendary Actions (HTML) */}
-              {selectedItem.legendaryActions && (
-                <div className="mb-4">
-                  <h3 className="text-2xl font-heading text-[#58180d] border-b border-[#d6a053] mb-2 pb-1">Legendary Actions</h3>
-                  <div 
-                    className="text-sm leading-relaxed prose prose-sm max-w-none text-[#000]"
-                    dangerouslySetInnerHTML={{ __html: selectedItem.legendaryActions }}
-                  />
-                </div>
-              )}
-
-            </div>
-          </div>
-        </div>
-      )}
-      
     </div>
   );
 }
