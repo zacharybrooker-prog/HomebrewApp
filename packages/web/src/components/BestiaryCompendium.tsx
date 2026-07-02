@@ -170,9 +170,6 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
   const uniqueSizes = useMemo(() => Array.from(new Set(items.map(i => String(i.size || '')))).sort(), [items]);
   const uniqueTypes = useMemo(() => Array.from(new Set(items.map(i => String(i.type || '')))).sort(), [items]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / 10));
-  const safePage = Math.min(currentPage, totalPages);
-  const currentItems = filteredItems.slice((safePage - 1) * 10, safePage * 10);
 
   const toggleFogOfWar = async (e: React.MouseEvent, item: BestiaryItem) => {
     e.stopPropagation();
