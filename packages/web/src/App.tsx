@@ -794,7 +794,13 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
         </div>
       )}
 
-      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && activeTab !== 'spells' && activeTab !== 'tavern' && (
+      {activeTab === 'bestiary' && (
+        <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
+          <BestiaryCompendium role={role} store={store} />
+        </div>
+      )}
+
+      {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && activeTab !== 'spells' && activeTab !== 'tavern' && activeTab !== 'bestiary' && (
       <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[110px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
@@ -962,9 +968,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
           />
         )}
 
-        {activeTab === 'bestiary' && (
-          <BestiaryCompendium role={role} store={store} />
-        )}
+
 
         {role === 'dm' && activeTab === 'events' && (
           <EventEditor 
