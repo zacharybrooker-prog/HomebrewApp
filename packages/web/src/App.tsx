@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { CampaignStore, formatCalendarDate, calculateDate, FirebaseProvider } from '@frogs-world/shared';
 import type { StatFieldDef, Item, CombatState, MonsterTemplate, EventTable, EventResult, CalendarConfig, CharacterProfile, Note, Handout, EventEntry, GlobalEffect, TimeState, EquipmentMap } from '@frogs-world/shared/src/schema';
-import { ThemeProvider, PHASES, TimeDial, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
+import { ThemeProvider, PHASES, CalendarView, CalendarEditor, Lobby, ItemManager, SettingsPanel, Journal, TraditionalSheet, Tavern } from '@frogs-world/ui';
 import { User as UserIcon, Scroll as ScrollIcon, Wand2 as Wand2Icon, BookOpen as BookOpenIcon, CalendarDays as CalendarDaysIcon, Beer as BeerIcon, Menu as MenuIcon } from 'lucide-react';
 
 const User = UserIcon as any;
@@ -506,95 +506,26 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
           else setActiveTab(tab as any);
         }} 
         activeTab={activeTab} 
+        locationName={locationName}
+        setLocationName={setLocationName}
+        visualTimeMs={visualTimeMs}
+        currentVisualBlock={currentVisualBlock}
+        activePhase={activePhase}
+        timeState={timeState}
+        store={store}
+        calendarConfig={calendarConfig}
+        formatClockTime={formatClockTime}
+        formatCalendarDate={formatCalendarDate}
+        handleAdvanceTime={handleAdvanceTime}
       />
       {activeTab !== 'sheet' && (
-      <header className="fixed top-0 left-0 right-0 z-[1000] flex flex-row items-center w-full px-6 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.9)]" style={{ height: '80px', backgroundImage: 'url(/grimdark-iron-border.png)', backgroundSize: 'cover', borderBottom: '4px solid #450a0a' }}>
-        {/* Left Zone: Location, Time & Title */}
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="flex items-center gap-3 shrink-0">
-            <button 
-              onClick={() => setIsNavMenuOpen(true)}
-              className="text-white hover:text-yellow-500 p-2 -ml-2 transition-colors drop-shadow-md"
-              aria-label="Open Navigation Menu"
-            >
-              <MenuIcon size={28} />
-            </button>
-            {role === 'dm' ? (
-              <input 
-                className="bg-transparent text-white border-b border-white/20 focus:outline-none focus:border-accent text-sm w-32"
-                value={locationName}
-                onChange={e => {
-                  setLocationName(e.target.value);
-                  store.setLocationName(e.target.value);
-                }}
-                placeholder="Location..."
-              />
-            ) : (
-              <span className="text-white text-sm font-semibold">{locationName}</span>
-            )}
-            <span className="text-white/50">|</span>
-            <span className="font-mono text-accent font-bold tracking-widest text-sm">{formatClockTime(visualTimeMs)}</span>
-            
-            {/* DM Time Controls */}
-            {role === 'dm' && (
-              <div className="flex items-center gap-1 ml-2">
-                <button onClick={() => timeState.isRunning ? store.pauseClock() : store.playClock()} className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-xs min-h-[44px] min-w-[44px]">
-                  {timeState.isRunning ? '⏸' : '▶'}
-                </button>
-                <select 
-                  className="bg-black/50 border border-white/20 rounded text-xs text-white p-1 outline-none min-h-[44px]"
-                  value={timeState.timeScale || 60}
-                  onChange={e => store.setTimeScale(Number(e.target.value))}
-                >
-                  <option value="1">1:1 Real</option>
-                  <option value="60">1m=1h</option>
-                  <option value="3600">1s=1h</option>
-                </select>
-              </div>
-            )}
-          </div>
-          {/* Dynamic Campaign Name */}
-          {campaignId && (
-            <div className="hidden sm:block truncate ml-4 max-w-[150px] md:max-w-[300px]">
-              <span className="truncate block" style={{ fontFamily: 'var(--font-decorative)', fontSize: '1.25rem', fontWeight: 900, letterSpacing: '0.08em', color: 'var(--secondary)', textShadow: '0 0 10px var(--secondary-glow)' }}>
-                {campaignId}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Center Zone: Phase Emblem Only */}
-        <div className="flex justify-center items-center flex-none">
-          <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-             <div style={{ transform: 'scale(0.4)', transformOrigin: 'center' }}>
-               <TimeDial phaseIndex={currentVisualBlock % 4} />
-             </div>
-          </div>
-        </div>
-
-        {/* Right Zone: Time Skips & Date */}
-        <div className="flex items-center justify-end gap-4 flex-1 min-w-0">
-          {role === 'dm' && (
-            <div className="hidden md:flex bg-black/50 border border-white/20 rounded divide-x divide-white/20 text-[10px] uppercase font-bold tracking-wider shrink-0">
-              <button onClick={() => handleAdvanceTime(1)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-gold min-h-[44px]">+6h</button>
-              <button onClick={() => handleAdvanceTime(2)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70 min-h-[44px]">+12h</button>
-              <button onClick={() => handleAdvanceTime(4)} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-white/70 min-h-[44px]">+24h</button>
-              <button onClick={() => {
-                  const daysInWeek = calendarConfig ? calendarConfig.weekdays.length : 7;
-                  handleAdvanceTime(4 * daysInWeek);
-                }} className="px-2 py-0.5 hover:bg-white/10 transition-colors text-secondary min-h-[44px]">+1w</button>
-            </div>
-          )}
-          <div className="flex flex-col items-end leading-none justify-center shrink-0">
-            <span style={{ fontFamily: 'var(--font-decorative)', fontSize: '0.85rem', color: 'var(--accent)', textShadow: '0 0 8px var(--accent-glow)' }}>
-              {activePhase}
-            </span>
-            <span className="text-[10px] text-white/70 mt-0.5">
-              {formatCalendarDate(currentVisualBlock, calendarConfig || undefined)}
-            </span>
-          </div>
-        </div>
-      </header>
+        <button 
+          onClick={() => setIsNavMenuOpen(true)}
+          className="fixed top-4 left-4 z-[1000] p-3 rounded-full bg-stone-900/80 backdrop-blur border border-stone-700 text-stone-300 hover:text-yellow-500 hover:bg-stone-900 hover:border-yellow-600 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] group"
+          aria-label="Open Navigation Menu"
+        >
+          <MenuIcon size={24} className="group-hover:scale-110 transition-transform" />
+        </button>
       )}
 
       {activeTab === 'sheet' && (
@@ -789,19 +720,19 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
       )}
 
       {activeTab === 'tavern' && (
-        <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
+        <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pb-[70px] sm:pb-[90px] px-0 md:px-4">
           <Tavern store={store} role={role!} activeCharId={activeCharId} characterProfiles={characterProfiles} onExit={() => setActiveTab(null as any)} />
         </div>
       )}
 
       {activeTab === 'bestiary' && (
-        <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
+        <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pb-[70px] sm:pb-[90px] px-0 md:px-4">
           <BestiaryCompendium role={role} store={store} onExit={() => setActiveTab(null as any)} />
         </div>
       )}
 
       {activeTab !== 'sheet' && activeTab !== 'journal' && activeTab !== 'calendar' && activeTab !== 'spells' && activeTab !== 'tavern' && activeTab !== 'bestiary' && (
-      <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[110px] px-4">
+      <div className="w-full min-h-screen flex flex-col items-center pb-[100px] pt-[60px] px-4">
         <div className="w-full flex flex-col gap-6" style={{ maxWidth: '520px' }}>
         
           <div className="fixed top-4 right-4 flex flex-col gap-2 z-50" style={{ maxWidth: '280px' }}>
