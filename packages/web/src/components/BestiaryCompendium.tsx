@@ -92,7 +92,6 @@ export const seedBestiaryJSON = async () => {
 export function BestiaryCompendium({ role, store }: { role: string | null, store: any }) {
   const [items, setItems] = useState<BestiaryItem[]>([]);
   const [search, setSearch] = useState('');
-  const [searchLetter, setSearchLetter] = useState('');
   const [filterCR, setFilterCR] = useState('');
   const [filterSize, setFilterSize] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -134,7 +133,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, searchLetter, filterCR, filterSize, filterType]);
+  }, [search, filterCR, filterSize, filterType]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
@@ -142,7 +141,6 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
       if (role !== 'dm' && !item.isRevealed) return false;
 
       if (search && !String(item.name).toLowerCase().includes(search.toLowerCase())) return false;
-      if (searchLetter && !String(item.name).toUpperCase().startsWith(searchLetter)) return false;
       
       if (filterCR && !String(item.cr).includes(filterCR)) return false;
       if (filterSize && String(item.size).toLowerCase() !== filterSize.toLowerCase()) return false;
@@ -150,7 +148,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
       
       return true;
     });
-  }, [items, search, searchLetter, filterCR, filterSize, filterType, role]);
+  }, [items, search, filterCR, filterSize, filterType, role]);
 
   const uniqueCRs = useMemo(() => {
     // Extract CR strings, handle "1/4", "10", etc.
@@ -168,7 +166,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
   }, [items]);
   
   const uniqueSizes = useMemo(() => Array.from(new Set(items.map(i => String(i.size || '')))).sort(), [items]);
-  const uniqueTypes = useMemo(() => Array.from(new Set(items.map(i => String(i.type || '')))).sort(), [items]);
+  // const uniqueTypes = useMemo(() => Array.from(new Set(items.map(i => String(i.type || '')))).sort(), [items]);
 
 
   const toggleFogOfWar = async (e: React.MouseEvent, item: BestiaryItem) => {
@@ -242,7 +240,15 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
     return '/monster_types/monstrosity.png';
   };
 
-  const ITEMS_PER_PAGE = 24; // 24 cards fits nicely (e.g. 4x6 grid)
+  const getSnippet = (item: BestiaryItem) => {
+    if ((item as any).flavorText) return (item as any).flavorText;
+    const raw = item.traits || item.actions || "";
+    const cleanText = raw.replace(/<[^>]*>?/gm, '');
+    if (cleanText.length > 160) return cleanText.substring(0, 160) + "...";
+    return cleanText || "No description available.";
+  };
+
+  const ITEMS_PER_PAGE = 20; // 20 rows per page fits well
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
   const currentItems = filteredItems.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
@@ -298,106 +304,71 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
         )}
       </div>
       
-      {/* HEADER CONTROLS */}
-      <div className="w-full max-w-5xl sticky top-[70px] z-[50] p-4 mb-4 rounded-b-xl border-x border-b shadow-lg glass-panel flex flex-col gap-3" 
-           style={{ borderColor: 'var(--border-accent)', background: 'rgba(10, 15, 25, 0.85)', backdropFilter: 'blur(12px)' }}>
-        
-        <div className="flex flex-col md:flex-row gap-3">
-          <input 
-            type="text"
-            placeholder="Search bestiary..."
-            className="input-fantasy flex-1"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <select className="select-fantasy w-full md:w-32" value={filterCR} onChange={e => setFilterCR(e.target.value)}>
-            <option value="">All CR</option>
-            {uniqueCRs.map(c => <option key={c} value={c}>CR {c}</option>)}
-          </select>
-          <select className="select-fantasy w-full md:w-32" value={filterSize} onChange={e => setFilterSize(e.target.value)}>
-            <option value="">All Sizes</option>
-            {uniqueSizes.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select className="select-fantasy w-full md:w-40" value={filterType} onChange={e => setFilterType(e.target.value)}>
-            <option value="">All Types</option>
-            {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          
-          {role === 'dm' && (
-            <button className="btn-accent whitespace-nowrap text-xs">
-              + Custom
-            </button>
-          )}
-        </div>
-
-        {/* A-Z Quick Jump */}
-        <div className="flex flex-wrap gap-1 justify-center mt-2">
-          {['All', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')].map(letter => (
-            <button 
-              key={letter} 
-              onClick={() => setSearchLetter(letter === 'All' ? '' : letter)} 
-              className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${searchLetter === letter || (letter === 'All' && !searchLetter) ? 'bg-accent text-black font-bold border-accent shadow-[0_0_8px_var(--accent-glow)]' : 'bg-black/40 text-white/70 border-white/20 hover:bg-white/10'}`}
-            >
-              {letter}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* LIST RENDERING */}
       <div className="glass-panel p-0 flex flex-col flex-1 relative overflow-hidden" style={{ minHeight: '500px' }}>
-        <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-[120px_1fr_60px_120px] gap-6 px-6 py-3 text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-[var(--border)] bg-black/40">
+          <div>Image</div>
+          <div>Monster Details</div>
+          <div>CR</div>
+          <div>Type</div>
+        </div>
+        <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-2">
+          <div className="flex flex-col">
             {currentItems.map(item => (
               <div 
                 key={item.id} 
                 onClick={() => setSelectedItem(item)}
-                className={`flex flex-col cursor-pointer select-none rounded-xl bg-[#161618] border border-white/5 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-[var(--accent)] hover:shadow-[0_10px_20px_rgba(225,29,72,0.2)]`}
+                className={`grid grid-cols-[120px_1fr_60px_120px] gap-6 px-4 py-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors items-center`}
               >
-                {/* Card Image Header */}
-                <div className="w-full aspect-[4/3] bg-black relative overflow-hidden">
+                {/* Image Cell */}
+                <div className="w-[120px] h-[120px] shrink-0 bg-black rounded-lg border border-white/10 overflow-hidden relative shadow-md">
                   <img 
                     src={item.imgUrl || getFallbackImage(String(item.type))} 
                     alt={item.name} 
-                    className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" 
+                    className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity" 
                   />
-                  {/* CR Badge */}
-                  <div className="absolute top-2 right-2 px-2 py-1 bg-black/80 backdrop-blur border border-[var(--border-accent)] rounded text-[10px] font-bold text-secondary tracking-widest uppercase">
-                    CR {String(item.cr || '').split(' ')[0]}
-                  </div>
-                  {/* Hidden Badge */}
                   {role === 'dm' && !item.isRevealed && (
-                    <div className="absolute top-2 left-2 bg-red-900/80 backdrop-blur text-red-300 border border-red-700 px-2 py-1 rounded text-[10px] uppercase tracking-widest">
+                    <div className="absolute top-1 left-1 bg-red-900/80 backdrop-blur text-red-300 border border-red-700 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest">
                       Hidden
                     </div>
                   )}
                 </div>
 
-                {/* Card Body */}
-                <div className="p-4 flex flex-col gap-1 relative">
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-heading font-bold text-lg text-gray-100 leading-tight truncate" title={item.name}>
+                {/* Details Cell */}
+                <div className="flex flex-col gap-1 justify-center h-full pr-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-heading font-bold text-xl text-gray-100 leading-tight">
                       {item.name}
                     </h3>
                     {role === 'dm' && (
                       <button 
                         onClick={(e) => toggleFogOfWar(e, item)}
-                        className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full bg-black/50 border transition-colors text-sm ${item.isRevealed ? 'border-accent text-accent' : 'border-white/10 text-white/30 hover:border-white/30 hover:text-white/80'}`}
+                        className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-black/50 border transition-colors text-xs ${item.isRevealed ? 'border-accent text-accent' : 'border-white/10 text-white/30 hover:border-white/30 hover:text-white/80'}`}
                         title={item.isRevealed ? "Hide from players" : "Reveal to players"}
                       >
                         {item.isRevealed ? "👁️" : "👁️‍🗨️"}
                       </button>
                     )}
                   </div>
-                  <div className="text-[11px] text-gray-400 uppercase tracking-widest truncate">
-                    {item.size} {item.type}
+                  <div className="text-xs text-gray-400 leading-relaxed line-clamp-3 mt-1 italic opacity-80">
+                    {getSnippet(item)}
                   </div>
-                  <div className="text-[11px] text-gray-500 italic truncate mt-1">
-                    {item.alignment}
-                  </div>
+                </div>
+
+                {/* CR Cell */}
+                <div className="text-sm font-bold text-accent">
+                  CR {String(item.cr || '').split(' ')[0]}
+                </div>
+
+                {/* Type Cell */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm capitalize text-muted-foreground">{item.type}</span>
+                  <span className="text-[10px] uppercase tracking-widest text-gray-500">{item.size}</span>
                 </div>
               </div>
             ))}
+
           </div>
           
           {filteredItems.length === 0 && (
