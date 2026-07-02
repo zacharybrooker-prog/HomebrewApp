@@ -89,7 +89,7 @@ export const seedBestiaryJSON = async () => {
 };
 
 // ====== COMPONENT ======
-export function BestiaryCompendium({ role, store }: { role: string | null, store: any }) {
+export function BestiaryCompendium({ role, store, onExit }: { role: string | null, store: any, onExit?: () => void }) {
   const [items, setItems] = useState<BestiaryItem[]>([]);
   const [search, setSearch] = useState('');
   const [filterCR, setFilterCR] = useState('');
@@ -250,11 +250,18 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
         <div className="p-4 bg-[#121212] border-b border-[#2a2a2a] flex flex-col gap-3 sticky top-0 z-20">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest m-0">Bestiary</h2>
-            {role === 'dm' && (
-              <button className="text-[10px] uppercase font-bold text-accent border border-accent/30 bg-accent/10 px-2 py-1 rounded hover:bg-accent hover:text-black transition-colors">
-                + Custom
-              </button>
-            )}
+            <div className="flex gap-2">
+              {role === 'dm' && (
+                <button className="text-[10px] uppercase font-bold text-accent border border-accent/30 bg-accent/10 px-2 py-1 rounded hover:bg-accent hover:text-black transition-colors">
+                  + Custom
+                </button>
+              )}
+              {onExit && (
+                <button onClick={onExit} className="text-[10px] uppercase font-bold text-gray-500 border border-[#333] px-3 py-1 rounded hover:bg-gray-800 transition-colors">
+                  EXIT
+                </button>
+              )}
+            </div>
           </div>
           <input 
             type="text" 
@@ -331,7 +338,7 @@ export function BestiaryCompendium({ role, store }: { role: string | null, store
       </div>
 
       {/* RIGHT COLUMN: Detail View */}
-      <div className={`flex-1 flex flex-col bg-[#121212] relative overflow-hidden ${!selectedItem ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col bg-[#242424] relative shadow-[inset_10px_0_20px_rgba(0,0,0,0.3)] ${!selectedItem ? 'hidden md:flex' : 'flex'}`}>
         {!selectedItem ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-600">
             <div className="text-6xl mb-4 opacity-10">🐉</div>

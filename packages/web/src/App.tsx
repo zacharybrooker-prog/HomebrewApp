@@ -796,7 +796,7 @@ export function GameApp({ store, initialRole, campaignId, initialCharacterId, in
 
       {activeTab === 'bestiary' && (
         <div className="w-full h-[100dvh] overflow-hidden flex flex-col bg-black pt-[80px] pb-[70px] sm:pb-[90px] px-0 md:px-4">
-          <BestiaryCompendium role={role} store={store} />
+          <BestiaryCompendium role={role} store={store} onExit={() => setActiveTab(null as any)} />
         </div>
       )}
 
