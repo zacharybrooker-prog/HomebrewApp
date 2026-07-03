@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import type { StatFieldDef, CharacterProfile, Item, StatusInstance, CalendarConfig, ItemTemplate, Note, Handout, GlobalEffect, MapPin, CombatState, TimeState } from './schema';
+import type { StatFieldDef, CharacterProfile, Item, StatusInstance, CalendarConfig, ItemTemplate, Note, Handout, GlobalEffect, MapPin, CombatState, TimeState, BestiaryItem } from './schema';
 import { NoteSchema, HandoutSchema } from './schema';
 import { computeEffects, computeRevertEffects, type EffectMutation } from './effects/engine';
 
@@ -1177,6 +1177,54 @@ export class CampaignStore {
     timeState.timeScale = scale;
     
     shared.set('timeState', timeState);
+  }
+
+  // ================= Phase 11: Custom Bestiary =================
+  private getCustomMonstersMap(): Y.Map<BestiaryItem> {
+    const dmMap = this.getDmMap();
+    if (!dmMap.has('customMonsters')) {
+      dmMap.set('customMonsters', new Y.Map());
+    }
+    return dmMap.get('customMonsters') as Y.Map<BestiaryItem>;
+  }
+
+  private getRevealedMonstersMap(): Y.Map<boolean> {
+    const dmMap = this.getDmMap();
+    if (!dmMap.has('revealedMonsters')) {
+      dmMap.set('revealedMonsters', new Y.Map());
+    }
+    return dmMap.get('revealedMonsters') as Y.Map<boolean>;
+  }
+
+  public getCustomMonsters(): BestiaryItem[] {
+    return Array.from(this.getCustomMonstersMap().values());
+  }
+
+  public getRevealedMonsterIds(): Set<string> {
+    const ids = new Set<string>();
+    for (const [id, isRevealed] of this.getRevealedMonstersMap().entries()) {
+      if (isRevealed) ids.add(id);
+    }
+    return ids;
+  }
+
+  public saveCustomMonster(monster: BestiaryItem) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    if (!monster.id) throw new Error('Monster must have an ID');
+    this.getCustomMonstersMap().set(monster.id, monster);
+  }
+
+  public deleteCustomMonster(id: string) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    this.getCustomMonstersMap().delete(id);
+    this.getRevealedMonstersMap().delete(id);
+  }
+
+  public toggleMonsterVisibility(id: string) {
+    if (this.role !== 'dm') throw new Error('Unauthorized');
+    const revealedMap = this.getRevealedMonstersMap();
+    const currentState = revealedMap.get(id) || false;
+    revealedMap.set(id, !currentState);
   }
 
   public destroy(): void {

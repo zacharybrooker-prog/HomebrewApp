@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { db } from '../firebase';
-import { collection, query, onSnapshot, writeBatch, doc, updateDoc } from 'firebase/firestore';
+import { db, storage } from '../firebase';
+import { collection, query, onSnapshot, writeBatch, doc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { BestiaryItem, Combatant } from '@frogs-world/shared/src/schema';
 import { v4 as uuidv4 } from 'uuid';
 import monstersData from '../data/srd_5e_monsters.json';
@@ -90,18 +91,39 @@ export const seedBestiaryJSON = async () => {
 
 // ====== COMPONENT ======
 export function BestiaryCompendium({ role, store, onExit }: { role: string | null, store: any, onExit?: () => void }) {
-  const [items, setItems] = useState<BestiaryItem[]>([]);
+  const [firebaseItems, setFirebaseItems] = useState<BestiaryItem[]>([]);
+  const [customMonsters, setCustomMonsters] = useState<BestiaryItem[]>([]);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
+  
+  const [isEditingCustom, setIsEditingCustom] = useState(false);
+  const [customFormData, setCustomFormData] = useState<Partial<BestiaryItem>>({});
+  const [isUploading, setIsUploading] = useState(false);
+
   const [search, setSearch] = useState('');
   const [filterCR, setFilterCR] = useState('');
   const [filterType, setFilterType] = useState('');
-  
   const [selectedItem, setSelectedItem] = useState<BestiaryItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    const dmMap = store.getDmMap();
+    const updateLocalState = () => {
+      setCustomMonsters(store.getCustomMonsters());
+      setRevealedIds(store.getRevealedMonsterIds());
+    };
+    dmMap.observeDeep(updateLocalState);
+    updateLocalState();
+    return () => dmMap.unobserveDeep(updateLocalState);
+  }, [store]);
+
+  const allItems = useMemo(() => {
+    return [...firebaseItems, ...customMonsters].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  }, [firebaseItems, customMonsters]);
+
+  useEffect(() => {
     const q = query(collection(db, 'bestiary'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allItems = snapshot.docs.map(doc => {
+      const parsedItems = snapshot.docs.map(doc => {
         const data = doc.data();
         return { 
           id: doc.id, 
@@ -124,8 +146,7 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
           }
         } as unknown as BestiaryItem;
       });
-      allItems.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-      setItems(allItems);
+      setFirebaseItems(parsedItems);
     });
     return () => unsubscribe();
   }, []);
@@ -135,9 +156,11 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
   }, [search, filterCR, filterType]);
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
-      // Visibility:
-      if (role !== 'dm' && !item.isRevealed) return false;
+    return allItems.filter(item => {
+      // Visibility: rely on CampaignStore revealedIds for all items!
+      // This enforces that the active campaign strictly dictates what is revealed
+      const isItemRevealed = revealedIds.has(item.id!);
+      if (role !== 'dm' && !isItemRevealed) return false;
 
       if (search && !String(item.name).toLowerCase().includes(search.toLowerCase())) return false;
       
@@ -146,11 +169,11 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
       
       return true;
     });
-  }, [items, search, filterCR, filterType, role]);
+  }, [allItems, search, filterCR, filterType, role, revealedIds]);
 
   const uniqueCRs = useMemo(() => {
     // Extract CR strings, handle "1/4", "10", etc.
-    const crs = new Set(items.map(i => String(i.cr || '').split(' ')[0])); // "10 (5,900 XP)" -> "10"
+    const crs = new Set(allItems.map(i => String(i.cr || '').split(' ')[0])); // "10 (5,900 XP)" -> "10"
     return Array.from(crs).sort((a, b) => {
       const parseFraction = (s: string) => {
         if (!s.includes('/')) return parseFloat(s) || 0;
@@ -161,17 +184,13 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
       const numB = parseFraction(b);
       return numA - numB;
     });
-  }, [items]);
+  }, [allItems]);
 
 
-  const toggleFogOfWar = async (e: React.MouseEvent, item: BestiaryItem) => {
+  const toggleFogOfWar = (e: React.MouseEvent, item: BestiaryItem) => {
     e.stopPropagation();
     if (!item.id) return;
-    try {
-      await updateDoc(doc(db, 'bestiary', item.id), { isRevealed: !item.isRevealed });
-    } catch (err) {
-      console.error(err);
-    }
+    store.toggleMonsterVisibility(item.id);
   };
 
   const rollInitiative = (dexModString: string) => {
@@ -216,6 +235,69 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
     }
   };
 
+  const handleImageUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const storageRef = ref(storage, `custom_bestiary/${uuidv4()}.${ext}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setCustomFormData(prev => ({ ...prev, imgUrl: url }));
+    } catch (e) {
+      console.error(e);
+      alert('Failed to upload image');
+    }
+    setIsUploading(false);
+  };
+
+  const handleSaveCustomMonster = async () => {
+    try {
+      const id = customFormData.id || uuidv4();
+      const finalItem: BestiaryItem = {
+        name: customFormData.name || 'Unnamed Monster',
+        size: customFormData.size || 'Medium',
+        type: customFormData.type || 'Beast',
+        alignment: customFormData.alignment || 'Unaligned',
+        ac: customFormData.ac || '10',
+        hp: customFormData.hp || '10',
+        speed: customFormData.speed || '30 ft.',
+        stats: customFormData.stats || {
+          str: "10", str_mod: "(+0)", dex: "10", dex_mod: "(+0)", con: "10", con_mod: "(+0)",
+          int: "10", int_mod: "(+0)", wis: "10", wis_mod: "(+0)", cha: "10", cha_mod: "(+0)"
+        },
+        cr: customFormData.cr || '0',
+        savingThrows: customFormData.savingThrows || '',
+        skills: customFormData.skills || '',
+        damageResistances: customFormData.damageResistances || '',
+        damageVulnerabilities: customFormData.damageVulnerabilities || '',
+        damageImmunities: customFormData.damageImmunities || '',
+        conditionImmunities: customFormData.conditionImmunities || '',
+        senses: customFormData.senses || '',
+        languages: customFormData.languages || '',
+        traits: customFormData.traits || '',
+        actions: customFormData.actions || '',
+        legendaryActions: customFormData.legendaryActions || '',
+        imgUrl: customFormData.imgUrl || '',
+        isCustom: true,
+        isShared: false,
+        isRevealed: false,
+        authorId: store.doc.guid, // fallback ID
+        id: id
+      };
+
+      // Save to campaign store
+      store.saveCustomMonster(finalItem);
+
+      // Save to Vault
+      await setDoc(doc(db, 'vault_bestiary', id), finalItem);
+      
+      setIsEditingCustom(false);
+      setSelectedItem(finalItem);
+    } catch (e: any) {
+      alert(`Error saving: ${e.message}`);
+    }
+  };
+
   const getFallbackImage = (typeStr: string) => {
     const t = String(typeStr).toLowerCase();
     if (t.includes('aberration')) return '/monster_types/aberration.png';
@@ -244,7 +326,7 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
     <div className="flex flex-col md:flex-row w-full h-full min-h-[60vh] max-w-7xl mx-auto rounded-lg overflow-hidden bg-[#121212] border border-[#2a2a2a] shadow-2xl font-sans text-gray-200">
       
       {/* LEFT COLUMN: Filters & Monster List */}
-      <div className={`w-full md:w-[350px] lg:w-[400px] flex flex-col bg-[#1A1A1A] border-r border-[#2a2a2a] md:min-h-[70vh] shadow-[inset_-10px_0_20px_rgba(0,0,0,0.5)] z-10 shrink-0 ${selectedItem ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-[350px] lg:w-[400px] flex flex-col bg-[#1A1A1A] border-r border-[#2a2a2a] md:min-h-[70vh] shadow-[inset_-10px_0_20px_rgba(0,0,0,0.5)] z-10 shrink-0 ${(selectedItem || isEditingCustom) ? 'hidden md:flex' : 'flex'}`}>
         
         {/* Header / Search Controls */}
         <div className="p-4 bg-[#121212] border-b border-[#2a2a2a] flex flex-col gap-3 sticky top-0 z-20">
@@ -252,7 +334,24 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest m-0">Bestiary</h2>
             <div className="flex gap-2">
               {role === 'dm' && (
-                <button className="text-[10px] uppercase font-bold text-accent border border-accent/30 bg-accent/10 px-2 py-1 rounded hover:bg-accent hover:text-black transition-colors">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSelectedItem(null);
+                    setCustomFormData({
+                      stats: {
+                        str: "10", str_mod: "(+0)",
+                        dex: "10", dex_mod: "(+0)",
+                        con: "10", con_mod: "(+0)",
+                        int: "10", int_mod: "(+0)",
+                        wis: "10", wis_mod: "(+0)",
+                        cha: "10", cha_mod: "(+0)"
+                      }
+                    });
+                    setIsEditingCustom(true);
+                  }}
+                  className="text-[10px] uppercase font-bold text-accent border border-accent/30 bg-accent/10 px-2 py-1 rounded hover:bg-accent hover:text-black transition-colors"
+                >
                   + Custom
                 </button>
               )}
@@ -287,7 +386,10 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
           {currentItems.map(item => (
             <button 
               key={item.id} 
-              onClick={() => setSelectedItem(item)}
+              onClick={() => {
+                setIsEditingCustom(false);
+                setSelectedItem(item);
+              }}
               className={`w-full text-left p-3 border-b border-[#2a2a2a] transition-colors flex gap-3 items-center group relative ${
                 selectedItem?.id === item.id ? 'bg-[#242424] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-red-500' : 'hover:bg-[#1a1a1a]'
               }`}
@@ -304,7 +406,7 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
               </div>
               
               {/* DM Fog of War Indicator */}
-              {role === 'dm' && !item.isRevealed && (
+              {role === 'dm' && !revealedIds.has(item.id!) && (
                 <div className="absolute top-1 right-1 text-[8px] bg-red-900/80 backdrop-blur text-red-200 px-1 rounded uppercase tracking-tighter">Hidden</div>
               )}
             </button>
@@ -337,9 +439,130 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Detail View */}
-      <div className={`flex-1 flex flex-col bg-[#242424] relative shadow-[inset_10px_0_20px_rgba(0,0,0,0.3)] ${!selectedItem ? 'hidden md:flex' : 'flex'}`}>
-        {!selectedItem ? (
+
+      {/* RIGHT COLUMN DETAILS AND EDITOR */}
+      <div className={`flex-1 flex flex-col bg-[#242424] relative shadow-[inset_10px_0_20px_rgba(0,0,0,0.3)] ${!selectedItem && !isEditingCustom ? 'hidden md:flex' : 'flex'}`}>
+        {isEditingCustom ? (
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#1a1a1a]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold font-heading text-yellow-500">Custom Beast Maker</h2>
+              <button onClick={() => setIsEditingCustom(false)} className="text-gray-400 hover:text-white">&times; Cancel</button>
+            </div>
+            
+            <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Name</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.name || ''} onChange={e => setCustomFormData({...customFormData, name: e.target.value})} placeholder="e.g. Ancient Void Dragon" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Image URL (or upload)</label>
+                  <div className="flex gap-2">
+                    <input type="text" className="flex-1 bg-[#121212] border border-[#333] rounded px-3 py-2 text-white text-xs" value={customFormData.imgUrl || ''} onChange={e => setCustomFormData({...customFormData, imgUrl: e.target.value})} placeholder="https://..." />
+                    <label className="bg-stone-800 border border-stone-600 hover:bg-stone-700 px-3 py-2 rounded cursor-pointer text-xs flex items-center">
+                      {isUploading ? '...' : 'Upload'}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleImageUpload(e.target.files[0]); }} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Size</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.size || ''} onChange={e => setCustomFormData({...customFormData, size: e.target.value})} placeholder="Huge" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Type</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.type || ''} onChange={e => setCustomFormData({...customFormData, type: e.target.value})} placeholder="Dragon" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Alignment</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.alignment || ''} onChange={e => setCustomFormData({...customFormData, alignment: e.target.value})} placeholder="Chaotic Evil" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">AC</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.ac || ''} onChange={e => setCustomFormData({...customFormData, ac: e.target.value})} placeholder="22 (Natural)" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">HP</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.hp || ''} onChange={e => setCustomFormData({...customFormData, hp: e.target.value})} placeholder="546 (28d20 + 252)" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Speed</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.speed || ''} onChange={e => setCustomFormData({...customFormData, speed: e.target.value})} placeholder="40 ft., fly 80 ft." />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">CR</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.cr || ''} onChange={e => setCustomFormData({...customFormData, cr: e.target.value})} placeholder="24" />
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="bg-[#121212] p-4 rounded border border-[#333]">
+                <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-3 block">Ability Scores</label>
+                <div className="grid grid-cols-6 gap-2">
+                  {['str', 'dex', 'con', 'int', 'wis', 'cha'].map((stat) => (
+                    <div key={stat}>
+                      <span className="text-[10px] uppercase text-gray-400 block mb-1 text-center">{stat}</span>
+                      <input type="text" className="w-full bg-[#1A1A1A] border border-[#444] rounded px-2 py-1 text-white text-center mb-1" 
+                        value={(customFormData.stats as any)?.[stat] || '10'} 
+                        onChange={e => setCustomFormData(p => ({ ...p, stats: { ...p.stats, [stat]: e.target.value } as any }))} 
+                      />
+                      <input type="text" className="w-full bg-black border border-[#444] rounded px-2 py-1 text-gray-400 text-xs text-center" 
+                        value={(customFormData.stats as any)?.[`${stat}_mod`] || '(+0)'} 
+                        onChange={e => setCustomFormData(p => ({ ...p, stats: { ...p.stats, [`${stat}_mod`]: e.target.value } as any }))} 
+                        placeholder="(+0)"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Defense / Senses */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Saving Throws</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.savingThrows || ''} onChange={e => setCustomFormData({...customFormData, savingThrows: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Skills</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.skills || ''} onChange={e => setCustomFormData({...customFormData, skills: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Damage Immunities</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.damageImmunities || ''} onChange={e => setCustomFormData({...customFormData, damageImmunities: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Condition Immunities</label>
+                  <input type="text" className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white" value={customFormData.conditionImmunities || ''} onChange={e => setCustomFormData({...customFormData, conditionImmunities: e.target.value})} />
+                </div>
+              </div>
+
+              {/* Text Areas */}
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Traits (HTML supported)</label>
+                <textarea className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white h-24" value={customFormData.traits || ''} onChange={e => setCustomFormData({...customFormData, traits: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-1 block">Actions (HTML supported)</label>
+                <textarea className="w-full bg-[#121212] border border-[#333] rounded px-3 py-2 text-white h-32" value={customFormData.actions || ''} onChange={e => setCustomFormData({...customFormData, actions: e.target.value})} />
+              </div>
+              
+              <button 
+                onClick={handleSaveCustomMonster}
+                disabled={!customFormData.name}
+                className="mt-4 w-full bg-yellow-600 hover:bg-yellow-500 disabled:bg-stone-800 disabled:text-stone-500 text-black font-bold uppercase tracking-widest py-4 rounded transition-colors shadow-lg"
+              >
+                Save Monster to Vault & Campaign
+              </button>
+            </div>
+          </div>
+        ) : !selectedItem ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-600">
             <div className="text-6xl mb-4 opacity-10">🐉</div>
             <p className="text-sm uppercase tracking-widest font-bold">Select a monster to view details</p>
@@ -366,11 +589,35 @@ export function BestiaryCompendium({ role, store, onExit }: { role: string | nul
                 </div>
                 {role === 'dm' && (
                   <div className="flex gap-2">
+                    {selectedItem.isCustom && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setCustomFormData(selectedItem);
+                            setIsEditingCustom(true);
+                          }}
+                          className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded border border-yellow-700 bg-yellow-900/50 text-yellow-400 hover:text-white hover:bg-yellow-800 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this custom monster?')) {
+                              store.deleteCustomMonster(selectedItem.id!);
+                              setSelectedItem(null);
+                            }
+                          }}
+                          className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded border border-gray-600 bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                     <button 
                       onClick={(e) => toggleFogOfWar(e, selectedItem)}
-                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${selectedItem.isRevealed ? 'border-gray-500 text-gray-400 hover:text-white' : 'bg-red-900/50 border-red-700 text-red-300 hover:bg-red-900'}`}
+                      className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest rounded border transition-colors ${revealedIds.has(selectedItem.id!) ? 'border-gray-500 text-gray-400 hover:text-white' : 'bg-red-900/50 border-red-700 text-red-300 hover:bg-red-900'}`}
                     >
-                      {selectedItem.isRevealed ? "Hide from Players" : "Reveal to Players"}
+                      {revealedIds.has(selectedItem.id!) ? "Hide from Players" : "Reveal to Players"}
                     </button>
                     <button 
                       onClick={handleAddToCombat} 
